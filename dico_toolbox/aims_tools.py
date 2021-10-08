@@ -716,6 +716,40 @@ class PyMesh:
         return np.array([x[:] for x in mesh_prop])
 
 
+def transform_datapoints(data_points: np.ndarray, dxyz: np.ndarray, rotation_matrix: np.ndarray, translation_vector: np.ndarray, flip: bool = False) -> np.ndarray:
+    """Transform the data_points.
+
+    The datapoint are scaled according to dxyz, then rotated with rotation_matrix and
+    translated by translation_vector.
+
+    If flip is True, the x coordinates are inverted (x --> -x)
+    """
+
+    tr_data_points = np.empty_like(data_points, dtype=float)
+
+    for i, point in enumerate(data_points):
+        # multiply by scale factors
+        point = point*dxyz
+
+        if (rotation_matrix is not None) and not np.array_equal(rotation_matrix, np.eye(3)):
+            # print("rotate", point)
+            point = np.dot(rotation_matrix, point)
+
+        # translate
+        if (translation_vector is not None) and not np.array_equal(translation_vector, np.zeros(3)):
+            # print("translate", point, translation_vector)
+            point = point + translation_vector
+
+        if flip:
+            # print(point)
+            point[0] = -point[0]
+
+        # store
+        tr_data_points[i] = point
+
+    return tr_data_points
+
+
 class PyMeshFrame:
     def __init__(self, frame=None):
         """One frame of a mesh with numpy array vertices, polygons and normals."""
