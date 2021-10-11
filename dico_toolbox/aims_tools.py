@@ -297,6 +297,7 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
             mesh = shift_aims_mesh(
                 mesh, translation[i], scale=transl_scale, axis=i)
 
+    os.system(f"rm -rf {dirpath}")
     return mesh
 
 
