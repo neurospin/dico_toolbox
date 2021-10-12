@@ -16,9 +16,36 @@ def get_vertices_by_name(name, graph):
 buckets_labels = ['aims_ss', 'aims_other', 'aims_bottom']
 
 
-def get_vertices_names(graph):
-    pyg = _pyGraph(graph)
-    return [v.name for v in pyg.vertices]
+def _get_property_from_list_of_dict(lst, prop, filt=None):
+    """Get property from a list of dictionnary.
+    Return a generator.
+
+    If the property does not exist or is None, it is not returned.
+    """
+    # Use no filter if none is specified
+    filt = lambda x : True if filt is None else filt
+    values_gen = (x.get(prop, None) for x in lst if filt(x))
+    values_gen = filter(lambda x : x is not None, values_gen)
+    return values_gen
+
+
+def get_property_from_vertices(graph, prop, filt=None):
+    """Get the property from all vertices in grap.
+    Filt is a boolean function used to filter the vertices.
+
+    If the property does not exist or is None, it is not returned.
+    """
+    values_gen = _get_property_from_list_of_dict(graph.veritces().list(), prop, filt)
+    return list(values_gen)
+
+def get_property_from_edges(graph, prop, filt=None):
+    """Get the property from all edges in grap.
+    Filt is a boolean function used to filter the edges.
+
+    If the property does not exist or is None, it is not returned.
+    """
+    values_gen = _get_property_from_list_of_dict(graph.edges().list(), prop, filt)
+    return list(values_gen)
 
 
 def stack_buckets(vertex, labels=["aims_ss", "aims_bottom", "aims_other"]):
