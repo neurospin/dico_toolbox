@@ -22,4 +22,4 @@ class topovalues:
     interior = topological_values['interior']
     exterior = topological_values['exterior']
 
-topological_values_by_value = dict((v, k) for k, v in topological_values.iteritems())
+topological_values_by_value = dict((v, k) for k, v in topological_values.items())
