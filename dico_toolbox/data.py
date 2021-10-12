@@ -10,9 +10,7 @@ try:
     from soma import aims as _aims
     HAS_AIMS = True
 except ImportError:
-    HAS_AIMS = False
-    log.warn("Can not import pyAims, are you in a brainvisa environment?")
-    
+    HAS_AIMS = False    
 
 def _with_brainvisa(fun):
     @functools.wraps(fun)
