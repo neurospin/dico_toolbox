@@ -1,6 +1,7 @@
 # this file exists only for retro-compatiblity
 # it will soon be removed.
 from .convert import *
+from soma import aims as _aims
 
 
 def rescale_mesh(mesh, dxyz):
@@ -8,7 +9,7 @@ def rescale_mesh(mesh, dxyz):
     The rescaling is done in place."""
     for i in range(mesh.size()):
         mesh.vertex(i).assign(
-            [aims.Point3df(np.array(x[:])*dxyz) for x in mesh.vertex(i)])
+            [_aims.Point3df(np.array(x[:])*dxyz) for x in mesh.vertex(i)])
 
 
 def flip_mesh(mesh, axis=0):
@@ -17,7 +18,7 @@ def flip_mesh(mesh, axis=0):
     flip_v[axis] = -1
     for i in range(mesh.size()):
         mesh.vertex(i).assign(
-            [aims.Point3df(np.array(x[:])*flip_v) for x in mesh.vertex(i)])
+            [_aims.Point3df(np.array(x[:])*flip_v) for x in mesh.vertex(i)])
 
 
 def shift_aims_mesh(mesh, offset, scale=1):
@@ -35,7 +36,7 @@ def shift_aims_mesh(mesh, offset, scale=1):
     if len(offset) != 3:
         raise ValueError("len(offset) must be 3.")
 
-    offset_mesh = aims.AimsTimeSurface(mesh)
+    offset_mesh = _aims.AimsTimeSurface(mesh)
     vertices = np.array([x[:] for x in mesh.vertex(0)])
     for axis in range(3):
         vertices[:, axis] += offset[axis]*scale

@@ -165,17 +165,3 @@ class pyGraph:
     
     def __repr__(self):
         return f"pyGraph of {len(self.vertices)} vertices"
-    
-    
-def get_vertices_by_name(name, graph):
-    """Return all vertices with given name in the graph"""
-    # with pyGraph
-    # pyg = pyGraph(graph)
-    # out = list(filter(lambda v : v.name == name, pyg.vertices))
-    
-    # without PyGraph
-    out = list(filter(lambda v : v.get('name') == name, graph.vertices().list()))
-    return out
-
-buckets_labels = ['aims_ss', 'aims_other', 'aims_bottom']
-    
