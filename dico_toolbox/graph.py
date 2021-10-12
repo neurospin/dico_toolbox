@@ -39,7 +39,7 @@ def stack_buckets(vertex, labels=["aims_ss", "aims_bottom", "aims_other"]):
     return stack
 
 
-def get_bucket_from_graph_by_suclus_name(graph, sulcus_name, labels=["aims_ss", "aims_bottom", "aims_other"], ICBM2009c=True):
+def get_bucket_from_graph_by_suclus_name(graph, sulcus_name, ICBM2009c, labels=["aims_ss", "aims_bottom", "aims_other"]):
     """
     Get and stack all buckets in the graph corresponding to sulcus name and labels.
     
