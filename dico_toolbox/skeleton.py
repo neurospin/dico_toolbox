@@ -4,8 +4,8 @@
 # reference : 1995 - JF Mangin et Al. From 3D magneti resonance images to structural ... Figure.12
 topological_values = {
     'interior' : 0,                 # [?] below gray matter
-    'volume' : 10                   # [A] volume point
-    'isolated' : 20                 # [B] isolated point
+    'volume' : 10,                  # [A] volume point
+    'isolated' : 20,                # [B] isolated point
     'exterior' : 11,                # [?] above gray matter
     'border' : 30,                  # [C] boder of a sulcus-element surface
     'curve' : 40,                   # [D] 1D curve
