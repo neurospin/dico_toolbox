@@ -3,7 +3,7 @@ import os
 import tempfile
 from soma import aims as _aims
 import numpy as np
-
+import shutil as _shutil
 import logging
 log = logging.getLogger(__name__)
 
@@ -318,6 +318,9 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
         if translation[i] != 0:
             mesh = shift_aims_mesh(
                 mesh, translation[i], scale=transl_scale, axis=i)
+
+    # delete the temporary files
+    _shutil.rmtree(dirpath)
 
     return mesh
 
