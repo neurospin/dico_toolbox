@@ -1,7 +1,7 @@
 # from scipy.ndimage.measurements import minimum
 import os
 import tempfile
-from soma import aims, aimsalgo
+from soma import aims as _aims
 import numpy as np
 
 import logging
@@ -19,7 +19,7 @@ def ndarray_to_volume_aims(ndarray):
     :rtype: aims.Volume
     """
     ndarray.reshape(*ndarray.shape, 1)
-    return aims.Volume(np.asfortranarray(ndarray))
+    return _aims.Volume(np.asfortranarray(ndarray))
 
 
 ndarray_to_aims_volume = ndarray_to_volume_aims
@@ -34,7 +34,7 @@ def new_volume_aims_like(vol):
     :rtype: aims.Volume
     """
     # set same dimensions and data type
-    new_vol = aims.Volume(
+    new_vol = _aims.Volume(
         vol.getSizeX(),
         vol.getSizeY(),
         vol.getSizeZ(),
@@ -46,20 +46,42 @@ def new_volume_aims_like(vol):
     return new_vol
 
 
-def bucket_aims_to_ndarray(aims_bucket):
-    """Transform an aims bucket into numpy array
+def bucketMAP_aims_to_ndarray(bck_map, scaled=True):
+    """Transform the first element of an aims bucket MAP into numpy array.
+    NOTE: Unless scaled=True, the voxel size stored in the bucket's header
+          is not taken into considesation here. The unscaled coordinates are returned.
+
+    :param bck_map: aims bucket MAP
+    :type aims_bucket: soma.aims.BucketMap_VOID
+    :param scaled: if True the coordinates are scaled according to the voxel size.
+    :return: bool
+    :rtype: numpy.ndarray
+    """
+
+    assert type(bck_map) in [_aims.BucketMap_VOID, _aims.rc_ptr_BucketMap_VOID]
+
+    if scaled:
+        dxyz = bck_map.header()['voxel_size'][:3]
+    else:
+        dxyz = np.ones(3)
+    
+    return bucket_aims_to_ndarray(bck_map[0], voxel_size=dxyz)
+
+
+def bucket_aims_to_ndarray(aims_bucket, voxel_size=(1,1,1)):
+    """Transform an aims bucket into numpy array.
 
     :param aims_bucket: aims bucket object
     :type aims_bucket: soma.aims.BucketMap_VOID.Bucket
-    :return: a Nx3 array of points of the bucket
     :rtype: numpy.ndarray
     """
-    assert isinstance(aims_bucket, aims.BucketMap_VOID.Bucket)
+    assert isinstance(aims_bucket, _aims.BucketMap_VOID.Bucket)
+    voxel_size = np.array(voxel_size)
 
     if aims_bucket.size() > 0:
         v = np.empty((aims_bucket.size(), len(aims_bucket.keys()[0].list())))
         for i, point in enumerate(aims_bucket.keys()):
-            v[i] = point.arraydata()
+            v[i] = point.arraydata()*voxel_size
     else:
         log.warning("Empty bucket! This can be a source of problems...")
         v = np.empty(0)
@@ -77,7 +99,7 @@ def bucket_numpy_to_bucket_aims(ndarray):
         ndarray = ndarray.astype(int)
 
     # create aims bucketmap instance
-    bck = aims.BucketMap_VOID()
+    bck = _aims.BucketMap_VOID()
     b0 = bck[0]
 
     # fill the bucket
@@ -155,7 +177,7 @@ def bucket_numpy_to_volume_aims(bucket_array, pad=0):
 
     v_size, v_min = _volume_size_from_numpy_bucket(bucket_array, pad)
 
-    vol = aims.Volume(*v_size, dtype='int16')
+    vol = _aims.Volume(*v_size, dtype='int16')
     vol.fill(0)
     avol = volume_to_ndarray(vol)
 
@@ -241,7 +263,7 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
 
     fname = "temp_initial.ima"
     # write volume to file
-    aims.write(ndarray_to_aims_volume(v), f"{dirpath}/{fname}")
+    _aims.write(ndarray_to_aims_volume(v), f"{dirpath}/{fname}")
 
     # Gaussian blur
     if smoothingFactor > 0:
@@ -253,7 +275,7 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
 
     # Threshold
     # read the blurred volume values and calculate the threshold
-    v = aims.read(f"{dirpath}/{fname}")[:]
+    v = _aims.read(f"{dirpath}/{fname}")[:]
     nonzero_voxels = v[v > 0].flatten()
     if type(aimsThreshold) == str:
         # the threshold is a string
@@ -287,7 +309,7 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
     log.debug(zcatCmd)
     os.system(zcatCmd)
 
-    mesh = aims.read(f"{dirpath}/combined.mesh")
+    mesh = _aims.read(f"{dirpath}/combined.mesh")
 
     assert len(translation) == 3, "len(translation) must be 3"
 
@@ -297,7 +319,6 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
             mesh = shift_aims_mesh(
                 mesh, translation[i], scale=transl_scale, axis=i)
 
-    os.system(f"rm -rf {dirpath}")
     return mesh
 
 
@@ -319,9 +340,9 @@ def bucket_to_mesh(bucket, smoothingFactor=0, aimsThreshold=1,
         aims Mesh : the mesh of the inputn volume.
     """
 
-    if isinstance(bucket, aims.BucketMap_VOID.Bucket):
+    if isinstance(bucket, _aims.BucketMap_VOID.Bucket):
         bucket = bucket_aims_to_ndarray(bucket)
-    elif isinstance(bucket, aims.BucketMap_VOID):
+    elif isinstance(bucket, _aims.BucketMap_VOID):
         raise ValueError("Input is a BucketMap, not a bucket.")
 
     if any([x-int(x) != 0 for x in bucket[:].ravel()]):
@@ -364,14 +385,14 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
 
     # apply Talairach transform
     M1 = get_aims_affine_transform(talairach_rot, talairach_tr)
-    aims.SurfaceManip.meshTransform(mesh, M1)
+    _aims.SurfaceManip.meshTransform(mesh, M1)
 
     if flip:
         flip_mesh(mesh)
 
     # apply alignment transform
     M2 = get_aims_affine_transform(align_rot, align_tr)
-    aims.SurfaceManip.meshTransform(mesh, M2)
+    _aims.SurfaceManip.meshTransform(mesh, M2)
 
     return mesh
 
@@ -379,52 +400,6 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
 def get_aims_affine_transform(rotation_matrix, transltion_vector):
     """Get an aims AffineTransformation3d from rotation matrix and rotation vector"""
     m = np.hstack([rotation_matrix, transltion_vector.reshape(-1, 1)])
-    M = aims.AffineTransformation3d()
+    M = _aims.AffineTransformation3d()
     M.fromMatrix(m)
     return M
-
-
-def rescale_mesh(mesh, dxyz):
-    """Rescale a mesh by multiplying its vertices with the factors in dxyx.
-    The rescaling is done in place."""
-    for i in range(mesh.size()):
-        mesh.vertex(i).assign(
-            [_aims.Point3df(np.array(x[:])*dxyz) for x in mesh.vertex(i)])
-
-
-def flip_mesh(mesh, axis=0):
-    """Flip the mesh by inverting the specified axis"""
-    flip_v = np.ones(3)
-    flip_v[axis] = -1
-    for i in range(mesh.size()):
-        mesh.vertex(i).assign(
-            [_aims.Point3df(np.array(x[:])*flip_v) for x in mesh.vertex(i)])
-
-
-def shift_aims_mesh(mesh, offset, scale=1):
-    """Translate each mesh of a specified distance along an axis.
-
-    The scale parameter multiplies the distance values before applying the translation.
-    Returns a shifted mesh
-    """
-    try:
-        iter(offset)
-    except TypeError:
-        raise TypeError(
-            "Offset must be an iterable of length 3. Use shift_aims_mesh_along_axis() to apply a scalar offset to a given axis")
-
-    if len(offset) != 3:
-        raise ValueError("len(offset) must be 3.")
-
-    offset_mesh = _aims.AimsTimeSurface(mesh)
-    vertices = np.array([x[:] for x in mesh.vertex(0)])
-    for axis in range(3):
-        vertices[:, axis] += offset[axis]*scale
-    offset_mesh.vertex(0).assign(vertices.tolist())
-    return offset_mesh
-
-
-def shift_aims_mesh_along_axis(mesh, offset, scale=30, axis=1):
-    shift_v = np.zeros(3)
-    shift_v[axis] = offset
-    return shift_aims_mesh(mesh, shift_v, scale=scale)
