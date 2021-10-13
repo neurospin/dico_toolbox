@@ -5,7 +5,10 @@ from soma import aims as _aims
 import numpy as np
 import shutil as _shutil
 import logging
+from ._dev import _deprecation_warning
 log = logging.getLogger(__name__)
+
+from . import mesh as _mesh
 
 
 def ndarray_to_volume_aims(ndarray):
@@ -18,32 +21,9 @@ def ndarray_to_volume_aims(ndarray):
     :return: an Aims Volume object containing the same data as ndarray
     :rtype: aims.Volume
     """
+    assert(ndarray.dtype in [np.int16, np.int32, np.float64]), "Wrong data type"
     ndarray.reshape(*ndarray.shape, 1)
     return _aims.Volume(np.asfortranarray(ndarray))
-
-
-ndarray_to_aims_volume = ndarray_to_volume_aims
-
-
-def new_volume_aims_like(vol):
-    """Create a new empty aims.Volume with the same shape as vol
-
-    :param vol: the volume data
-    :type vol: np.ndarray
-    :return: an empty Aims Volume object of the same shape as vol
-    :rtype: aims.Volume
-    """
-    # set same dimensions and data type
-    new_vol = _aims.Volume(
-        vol.getSizeX(),
-        vol.getSizeY(),
-        vol.getSizeZ(),
-        vol.getSizeT(),
-        dtype=vol.arraydata().dtype
-    )
-    # copy the header
-    new_vol.header().update(vol.header())
-    return new_vol
 
 
 def bucketMAP_aims_to_ndarray(bck_map, scaled=True):
@@ -75,6 +55,10 @@ def bucket_aims_to_ndarray(aims_bucket, voxel_size=(1,1,1)):
     :type aims_bucket: soma.aims.BucketMap_VOID.Bucket
     :rtype: numpy.ndarray
     """
+
+    if isinstance(aims_bucket, _aims.BucketMap_VOID):
+        raise ValueError("The argument is a BucketMap.")
+
     assert isinstance(aims_bucket, _aims.BucketMap_VOID.Bucket)
     voxel_size = np.array(voxel_size)
 
@@ -92,6 +76,8 @@ def bucket_numpy_to_bucket_aims(ndarray):
     """Transform a (N,3) ndarray into an aims BucketMap_VOID.
     The coordinates in the input array are casted to int.
     """
+
+    # TODO: set the voxel_size in the aims bucket
 
     assert ndarray.shape[1] == 3, " ndarray shape must be (N,3)"
 
@@ -189,7 +175,7 @@ def bucket_numpy_to_volume_aims(bucket_array, pad=0):
 
 
 def bucket_aims_to_volume_aims(aims_bucket, pad=0):
-    """Transform a bucket into a 3d boolean volume.
+    """Transform a bucket into a 3d binary volume.
     Input and output types are aims objects"""
 
     # TODO : transfer metadata
@@ -197,6 +183,13 @@ def bucket_aims_to_volume_aims(aims_bucket, pad=0):
 
     abucket = bucket_aims_to_ndarray(aims_bucket)
     return bucket_numpy_to_volume_aims(abucket, pad=pad)
+
+
+def bucket_aims_to_volume_numpy(aims_bucket):
+    """Transform a bucket into a 3D binary ndarray"""
+
+    abucket = bucket_aims_to_ndarray(aims_bucket)
+    return bucket_numpy_to_volume_numpy(abucket)
 
 
 def volume_to_bucket_numpy(volume):
@@ -263,7 +256,7 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
 
     fname = "temp_initial.ima"
     # write volume to file
-    _aims.write(ndarray_to_aims_volume(v), f"{dirpath}/{fname}")
+    _aims.write(ndarray_to_volume_aims(v), f"{dirpath}/{fname}")
 
     # Gaussian blur
     if smoothingFactor > 0:
@@ -316,7 +309,7 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
     for i in range(3):
         # for each dimension
         if translation[i] != 0:
-            mesh = shift_aims_mesh(
+            mesh = _mesh.shift_aims_mesh(
                 mesh, translation[i], scale=transl_scale, axis=i)
 
     # delete the temporary files
@@ -384,14 +377,14 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
     dxyz = talairach_dxyz.copy()
 
     # Rescale mesh
-    rescale_mesh(mesh, dxyz)
+    _mesh.rescale_mesh(mesh, dxyz)
 
     # apply Talairach transform
     M1 = get_aims_affine_transform(talairach_rot, talairach_tr)
     _aims.SurfaceManip.meshTransform(mesh, M1)
 
     if flip:
-        flip_mesh(mesh)
+        _mesh.flip_mesh(mesh)
 
     # apply alignment transform
     M2 = get_aims_affine_transform(align_rot, align_tr)
@@ -406,3 +399,8 @@ def get_aims_affine_transform(rotation_matrix, transltion_vector):
     M = _aims.AffineTransformation3d()
     M.fromMatrix(m)
     return M
+
+
+# ALIASES FOR DEPRECATED FUNCTIONS
+@_deprecation_warning(use_instead=ndarray_to_volume_aims)
+def ndarray_to_aims_volume(*args, **kwargs): pass
