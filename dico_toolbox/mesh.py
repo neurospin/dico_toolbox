@@ -41,7 +41,7 @@ def shift_aims_mesh(mesh, offset, scale=1):
     return offset_mesh
 
 
-def shift_aims_mesh_along_axis(mesh, offset, scale=30, axis=1):
+def shift_aims_mesh_along_axis(mesh, offset, scale=1, axis=1):
     shift_v = _np.zeros(3)
     shift_v[axis] = offset
     return shift_aims_mesh(mesh, shift_v, scale=scale)

@@ -9,6 +9,7 @@ from ._dev import _deprecation_warning
 log = logging.getLogger(__name__)
 
 from . import mesh as _mesh
+from . import bucket as _bucket
 
 
 def ndarray_to_volume_aims(ndarray):
@@ -67,7 +68,7 @@ def bucket_aims_to_ndarray(aims_bucket, voxel_size=(1,1,1)):
         for i, point in enumerate(aims_bucket.keys()):
             v[i] = point.arraydata()*voxel_size
     else:
-        log.warning("Empty bucket! This can be a source of problems...")
+        log.debug("Empty bucket! This can be a source of problems...")
         v = np.empty(0)
     return v
 
@@ -144,17 +145,21 @@ def _point_to_voxel_indices(point):
 
 def bucket_numpy_to_volume_numpy(bucket_array, pad=0, side=None):
     """Transform a bucket into a 3d boolean volume.
-    Input and output types are numpy.ndarray"""
+    Input and output types are numpy.ndarray
+    
+    Return: a Tuple (volume, offset)
+    the offset is a vector specifing the position of the origin in the volume
+    """
 
-    v_size, v_min = _volume_size_from_numpy_bucket(bucket_array, pad)
+    v_size, offset = _volume_size_from_numpy_bucket(bucket_array, pad)
 
     vol = np.zeros(np.array(v_size))
 
     for p in bucket_array:
-        x, y, z = _point_to_voxel_indices((p-v_min)+pad)
+        x, y, z = _point_to_voxel_indices((p-offset)+pad)
         vol[x, y, z] = 1
 
-    return vol
+    return vol, offset
 
 
 def bucket_numpy_to_volume_aims(bucket_array, pad=0):
@@ -186,11 +191,15 @@ def bucket_aims_to_volume_aims(aims_bucket, pad=0):
 
 
 def bucket_aims_to_volume_numpy(aims_bucket):
-    """Transform a bucket into a 3D binary ndarray"""
+    """Transform a bucket into a 3D binary ndarray volume.
+
+    Return: a Tuple (volume, offset)
+    the offset is a vector specifing the position of the origin in the volume
+    """
 
     abucket = bucket_aims_to_ndarray(aims_bucket)
-    return bucket_numpy_to_volume_numpy(abucket)
-
+    volume, offset = bucket_numpy_to_volume_numpy(abucket)
+    return volume, offset
 
 def volume_to_bucket_numpy(volume):
     """Transform a binary volume into a bucket.
@@ -225,7 +234,7 @@ def add_border(x, thickness, value):
 
 
 def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
-                   deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0), transl_scale=30):
+                   deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0)):
     """Generate the mesh of the input volume.
     WARNING: This function directly call some BrainVisa command line tools via os.system calls.
 
@@ -306,11 +315,9 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
 
     assert len(translation) == 3, "len(translation) must be 3"
 
-    for i in range(3):
-        # for each dimension
-        if translation[i] != 0:
-            mesh = _mesh.shift_aims_mesh(
-                mesh, translation[i], scale=transl_scale, axis=i)
+    if any(np.array(translation) != 0):
+        mesh = _mesh.shift_aims_mesh(
+            mesh, translation, scale=1)
 
     # delete the temporary files
     _shutil.rmtree(dirpath)
@@ -319,7 +326,7 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
 
 
 def bucket_to_mesh(bucket, smoothingFactor=0, aimsThreshold=1,
-                   deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0), scale=30):
+                   deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0), flip=False):
     """Generate the mesh of the input bucket.
     WARNING: This function directly call some BrainVisa command line tools via os.system calls.
 
@@ -341,6 +348,9 @@ def bucket_to_mesh(bucket, smoothingFactor=0, aimsThreshold=1,
     elif isinstance(bucket, _aims.BucketMap_VOID):
         raise ValueError("Input is a BucketMap, not a bucket.")
 
+    if flip:
+        bucket = _bucket.flip_bucket(bucket)
+
     if any([x-int(x) != 0 for x in bucket[:].ravel()]):
         log.warn(
             "This bucket's coordinates are not integers. Did you apply any transformation to it?")
@@ -348,11 +358,11 @@ def bucket_to_mesh(bucket, smoothingFactor=0, aimsThreshold=1,
     # x, y, z = bucket.T
     # translation = (x.min(), y.min(), z.min())
 
-    volume = bucket_numpy_to_volume_numpy(bucket)
+    volume, offset = bucket_numpy_to_volume_numpy(bucket)
 
     return volume_to_mesh(volume, smoothingFactor=smoothingFactor, aimsThreshold=aimsThreshold,
                           deciMaxError=deciMaxError, deciMaxClearance=deciMaxClearance, smoothIt=smoothIt,
-                          translation=translation, transl_scale=scale)
+                          translation=translation+offset)
 
 
 def buket_to_aligned_mesh(*args, **kwargs):
@@ -372,7 +382,7 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
     """
 
     # Generate mesh
-    mesh = bucket_to_mesh(raw_bucket, **kwargs)
+    mesh = bucket_to_mesh(raw_bucket, flip=flip, **kwargs)
 
     dxyz = talairach_dxyz.copy()
 
@@ -382,9 +392,6 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
     # apply Talairach transform
     M1 = get_aims_affine_transform(talairach_rot, talairach_tr)
     _aims.SurfaceManip.meshTransform(mesh, M1)
-
-    if flip:
-        _mesh.flip_mesh(mesh)
 
     # apply alignment transform
     M2 = get_aims_affine_transform(align_rot, align_tr)

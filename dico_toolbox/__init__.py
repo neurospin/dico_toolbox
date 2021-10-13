@@ -5,6 +5,7 @@ from . import wrappers
 from . import convert
 from . import graph
 from . import skeleton
+from . import bucket
 
 try:
     from soma import aims as _aims
