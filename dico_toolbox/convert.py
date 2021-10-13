@@ -163,8 +163,7 @@ def bucket_numpy_to_volume_numpy(bucket_array, pad=0, side=None):
 
 
 def bucket_numpy_to_volume_aims(bucket_array, pad=0):
-    """Transform a bucket into a 3d boolean volume.
-    Input and output types are numpy.ndarray"""
+    """Transform a bucket into a 3d binary volume."""
 
     v_size, v_min = _volume_size_from_numpy_bucket(bucket_array, pad)
 
@@ -180,14 +179,25 @@ def bucket_numpy_to_volume_aims(bucket_array, pad=0):
 
 
 def bucket_aims_to_volume_aims(aims_bucket, pad=0):
-    """Transform a bucket into a 3d binary volume.
-    Input and output types are aims objects"""
-
+    """Transform a bucket into a 3d binary volume."""
     # TODO : transfer metadata
     # e.g. the dxyz is kept in the aims volume
 
+    log.debug("The voxel size is lost in the conversion.")
+
     abucket = bucket_aims_to_ndarray(aims_bucket)
     return bucket_numpy_to_volume_aims(abucket, pad=pad)
+
+
+def bucketMap_aims_to_rc_ptr_Volume_aims(bucketMap, volume_type=_aims.rc_ptr_Volume_S16):
+    """Convert a bucketMap into an aims Volume.
+    
+    volume_type must be of type aims.rc_ptr_Volume_*.
+    In order to get an aims.Volume_* use the get() method of the re_ptr object
+    """
+    c = _aims.Converter(intype=bucketMap, outtype=_aims.rc_ptr_Volume_S16)
+    rc_ptr = c(bucketMap)
+    return rc_ptr
 
 
 def bucket_aims_to_volume_numpy(aims_bucket):
