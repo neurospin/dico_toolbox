@@ -431,13 +431,12 @@ def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
 def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
                    deciMaxError=1.0, deciMaxClearance=3.0,
                    deciReductionRate=99, smoothRate=0.4,
-                   smoothIt=30, translation=(0, 0, 0), flip=False):
+                   smoothIt=30, translation=(0, 0, 0)):
     """Generate the mesh of the input bucket.
     WARNING: This function directly call some BrainVisa command line tools via os.system calls.
 
     Args:
         bucket (nparray or pyaims bucket): The input bucket.
-        flip (bool), flip the x coordinate of the bucket before meshing
 
     see volume_to_mesh for a description of the other arguments
 
@@ -450,9 +449,6 @@ def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
     elif isinstance(bucket, _aims.BucketMap_VOID):
         raise ValueError("Input is a BucketMap, not a bucket.")
 
-    if flip:
-        bucket = _bucket.flip_bucket(bucket)
-
     if any([x-int(x) != 0 for x in bucket[:].ravel()]):
         log.warn(
             "This bucket's coordinates are not integers. Did you apply any transformation to it?")
@@ -460,10 +456,11 @@ def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
     volume, offset = bucket_numpy_to_volume_numpy(bucket)
     translation += offset
 
-    return volume_to_mesh(volume, gblur_sigma=gblur_sigma, threshold=threshold, smoothRate=smoothRate,
+    mesh = volume_to_mesh(volume, gblur_sigma=gblur_sigma, threshold=threshold, smoothRate=smoothRate,
                           deciMaxError=deciMaxError, deciMaxClearance=deciMaxClearance, smoothIt=smoothIt,
                           translation=translation, deciReductionRate=deciReductionRate)
 
+    return mesh
 
 def buket_to_aligned_mesh(*args, **kwargs):
     raise SyntaxError(
@@ -482,7 +479,7 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
     """
 
     # Generate mesh
-    mesh = bucket_to_mesh(raw_bucket, flip=flip, **kwargs)
+    mesh = bucket_to_mesh(raw_bucket, **kwargs)
 
     dxyz = talairach_dxyz.copy()
 
@@ -493,9 +490,12 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
     M1 = get_aims_affine_transform(talairach_rot, talairach_tr)
     _aims.SurfaceManip.meshTransform(mesh, M1)
 
-    # apply alignment transform
-    M2 = get_aims_affine_transform(align_rot, align_tr)
-    _aims.SurfaceManip.meshTransform(mesh, M2)
+    if flip:
+        _mesh.flip_mesh(mesh)
+
+    # # apply alignment transform
+    # M2 = get_aims_affine_transform(align_rot, align_tr)
+    # _aims.SurfaceManip.meshTransform(mesh, M2)
 
     return mesh
 

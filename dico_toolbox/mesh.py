@@ -10,13 +10,14 @@ def rescale_mesh(mesh, dxyz):
 
 
 def flip_mesh(mesh, axis=0):
-    """Flip the mesh by inverting the specified axis"""
+    """Flip the mesh by inverting the specified axis.
+    
+    This function modifies the input mesh."""
     flip_v = _np.ones(3)
     flip_v[axis] = -1
     for i in range(mesh.size()):
         mesh.vertex(i).assign(
             [_aims.Point3df(_np.array(x[:])*flip_v) for x in mesh.vertex(i)])
-
 
 def shift_aims_mesh(mesh, offset, scale=1):
     """Translate each mesh of a specified distance along an axis.
