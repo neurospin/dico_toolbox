@@ -1,6 +1,7 @@
 # from scipy.ndimage.measurements import minimum
 from . import bucket as _bucket
 from . import mesh as _mesh
+from . import transform as _transform
 import os
 import tempfile
 from soma import aims as _aims
@@ -26,7 +27,7 @@ def ndarray_to_volume_aims(ndarray):
     :rtype: aims.Volume
     """
     assert(ndarray.dtype in [np.int16, np.int32,
-           np.float64]), "Wrong data type"
+                             np.float64]), "Wrong data type"
     ndarray.reshape(*ndarray.shape, 1)
     return _aims.Volume(np.asfortranarray(ndarray))
 
@@ -462,6 +463,7 @@ def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
 
     return mesh
 
+
 def buket_to_aligned_mesh(*args, **kwargs):
     raise SyntaxError(
         "This function is deprecated due to misspelling of 'bucket', please use bucket_to_aligned_mesh")
@@ -487,25 +489,15 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
     _mesh.rescale_mesh(mesh, dxyz)
 
     # apply Talairach transform
-    M1 = get_aims_affine_transform(talairach_rot, talairach_tr)
-    _aims.SurfaceManip.meshTransform(mesh, M1)
+    _mesh.transform_mesh(mesh, talairach_rot, talairach_tr)
 
     if flip:
         _mesh.flip_mesh(mesh)
 
-    # # apply alignment transform
-    # M2 = get_aims_affine_transform(align_rot, align_tr)
-    # _aims.SurfaceManip.meshTransform(mesh, M2)
+    # apply alignment transform
+    _mesh.transform_mesh(mesh, align_rot, align_tr)
 
     return mesh
-
-
-def get_aims_affine_transform(rotation_matrix, transltion_vector):
-    """Get an aims AffineTransformation3d from rotation matrix and rotation vector"""
-    m = np.hstack([rotation_matrix, transltion_vector.reshape(-1, 1)])
-    M = _aims.AffineTransformation3d()
-    M.fromMatrix(m)
-    return M
 
 
 # ALIASES FOR DEPRECATED FUNCTIONS
