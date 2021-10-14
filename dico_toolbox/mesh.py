@@ -29,8 +29,8 @@ def transform_mesh(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
 
     Return None.
     """
-    M1 = _transform.get_aims_affine_transform(rot_matrix, transl_vec)
-    _aims.SurfaceManip.meshTransform(mesh, M1)
+    M = _transform.get_aims_affine_transform(rot_matrix, transl_vec)
+    _aims.SurfaceManip.meshTransform(mesh, M)
 
 
 def shift_aims_mesh(mesh, offset, scale=1):

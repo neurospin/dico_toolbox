@@ -489,7 +489,7 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
     _mesh.rescale_mesh(mesh, dxyz)
 
     # apply Talairach transform
-    _mesh.transform_mesh(mesh, talairach_rot, talairach_tr)
+    # _mesh.transform_mesh(mesh, talairach_rot, talairach_tr)
 
     if flip:
         _mesh.flip_mesh(mesh)
