@@ -45,3 +45,16 @@ def shift_aims_mesh_along_axis(mesh, offset, scale=1, axis=1):
     shift_v = _np.zeros(3)
     shift_v[axis] = offset
     return shift_aims_mesh(mesh, shift_v, scale=scale)
+
+
+def join_meshes(meshes):
+    """Join meshes.
+    
+    All the meshes in the given iterable will be joined with the first one.
+    The first element of meshes will be modified and returned.
+    """
+    assert len(meshes) > 0, "Empty mesh list"
+    for mesh in meshes[1:]:
+        _aims.SurfaceManip.meshMerge(meshes[0], mesh)
+        
+    return meshes[0]
