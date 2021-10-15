@@ -24,13 +24,20 @@ def _check_graph(graph):
     return graph
 
 
-def get_vertices_by_key(graph, key, needed):
+def get_vertices_by(graph, key, needed):
     """Return all vertices with given key in the graph"""
     if not isinstance(needed, list):
         needed = [needed]
     out = list(filter(lambda v: v.get(key) in needed,
                _check_graph(graph).vertices().list()))
     return out
+
+
+def get_vertices_by_name(name, graph):
+    """Return all vertices with given name in the graph"""
+    _warnings.warn("get_vertices_by_name() is deprecated. Please use get_vertices_by(graph, 'name', name)",
+                   _warnings.DeprecationWarning)
+    return get_vertices_by(graph, 'name', name)
 
 
 def _get_property_from_list_of_dict(lst, prop, filt=None):
