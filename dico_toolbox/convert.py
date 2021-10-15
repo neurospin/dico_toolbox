@@ -1,15 +1,18 @@
 # from scipy.ndimage.measurements import minimum
+from . import bucket as _bucket
+from . import mesh as _mesh
 import os
 import tempfile
 from soma import aims as _aims
+from soma import aimsalgo as _aimsalgo
+
+from scipy import ndimage as _ndimage
+
 import numpy as np
 import shutil as _shutil
 import logging
 from ._dev import _deprecation_warning
 log = logging.getLogger(__name__)
-
-from . import mesh as _mesh
-from . import bucket as _bucket
 
 
 def ndarray_to_volume_aims(ndarray):
@@ -22,7 +25,8 @@ def ndarray_to_volume_aims(ndarray):
     :return: an Aims Volume object containing the same data as ndarray
     :rtype: aims.Volume
     """
-    assert(ndarray.dtype in [np.int16, np.int32, np.float64]), "Wrong data type"
+    assert(ndarray.dtype in [np.int16, np.int32,
+           np.float64]), "Wrong data type"
     ndarray.reshape(*ndarray.shape, 1)
     return _aims.Volume(np.asfortranarray(ndarray))
 
@@ -45,11 +49,11 @@ def bucketMAP_aims_to_ndarray(bck_map, scaled=True):
         dxyz = bck_map.header()['voxel_size'][:3]
     else:
         dxyz = np.ones(3)
-    
+
     return bucket_aims_to_ndarray(bck_map[0], voxel_size=dxyz)
 
 
-def bucket_aims_to_ndarray(aims_bucket, voxel_size=(1,1,1)):
+def bucket_aims_to_ndarray(aims_bucket, voxel_size=(1, 1, 1)):
     """Transform an aims bucket into numpy array.
 
     :param aims_bucket: aims bucket object
@@ -146,7 +150,7 @@ def _point_to_voxel_indices(point):
 def bucket_numpy_to_volume_numpy(bucket_array, pad=0, side=None):
     """Transform a bucket into a 3d boolean volume.
     Input and output types are numpy.ndarray
-    
+
     Return: a Tuple (volume, offset)
     the offset is a vector specifing the position of the origin in the volume
     """
@@ -191,7 +195,7 @@ def bucket_aims_to_volume_aims(aims_bucket, pad=0):
 
 def bucketMap_aims_to_rc_ptr_Volume_aims(bucketMap, volume_type=_aims.rc_ptr_Volume_S16):
     """Convert a bucketMap into an aims Volume.
-    
+
     volume_type must be of type aims.rc_ptr_Volume_*.
     In order to get an aims.Volume_* use the get() method of the re_ptr object
     """
@@ -210,6 +214,7 @@ def bucket_aims_to_volume_numpy(aims_bucket):
     abucket = bucket_aims_to_ndarray(aims_bucket)
     volume, offset = bucket_numpy_to_volume_numpy(abucket)
     return volume, offset
+
 
 def volume_to_bucket_numpy(volume):
     """Transform a binary volume into a bucket.
@@ -243,15 +248,109 @@ def add_border(x, thickness, value):
     return x
 
 
-def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
-                   deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0)):
-    """Generate the mesh of the input volume.
-    WARNING: This function directly call some BrainVisa command line tools via os.system calls.
+# def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
+#                    deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0)):
+#     """Generate the mesh of the input volume.
+#     WARNING: This function directly call some BrainVisa command line tools via os.system calls.
+
+#     Args:
+#         volume (nparray or pyaims volume): The input volume.
+#         smoothingFactor (float, optional): Standard deviation of the 3D isomorph Gaussian filter of the input volume.
+#         aimsThreshold (float or str) : First threshold value. All voxels below this value are not considered.
+#             The threshold can be expressed as:
+#             - a float, representing the threshold intensity
+#             - a percentage (e.g. "95%") which represents the percentile of low-value pixel to eliminate.
+#         deciMaxError (float) : Maximum error distance from the original mesh (mm).
+#         deciMaxClearance (float) : Maximum clearance of the decimation.
+#         smoothIt (int) : Number of mesh smoothing iteration.
+#         translation (vector or 3 int) : translation to apply to the calculated mesh
+
+#     Returns:
+#         aims Mesh : the mesh of the inputn volume.
+#     """
+
+#     log.debug("volume_to_mesh:")
+
+#     v = volume[:]
+#     # normalize
+#     v = ((v - v.min())/(v.max()-v.min())*256).astype(np.float)
+
+#     # temporary directory
+#     dirpath = tempfile.mkdtemp()
+
+#     fname = "temp_initial.ima"
+#     # write volume to file
+#     _aims.write(ndarray_to_volume_aims(v), f"{dirpath}/{fname}")
+
+#     # Gaussian blur
+#     if smoothingFactor > 0:
+#         out_fname = "temp_smoothed.ima"
+#         gaussianSmoothCmd = f'AimsGaussianSmoothing -i {dirpath}/{fname} -o {dirpath}/{out_fname} -x {smoothingFactor} -y {smoothingFactor} -z {smoothingFactor}'
+#         log.debug(gaussianSmoothCmd)
+#         os.system(gaussianSmoothCmd)
+#         fname = out_fname
+
+#     # Threshold
+#     # read the blurred volume values and calculate the threshold
+#     v = _aims.read(f"{dirpath}/{fname}")[:]
+#     nonzero_voxels = v[v > 0].flatten()
+#     if type(aimsThreshold) == str:
+#         # the threshold is a string
+#         if aimsThreshold[-1] == '%':
+#             # use the percentage value
+#             q = float(aimsThreshold[:-1])
+#             aimsThreshold = np.percentile(nonzero_voxels, q)
+#         else:
+#             raise ValueError(
+#                 "aimsThreshold must be a float or a string expressing a percentage (eg '90%')")
+
+#     out_fname = "temp_threshold.ima"
+#     thresholdCmd = f"AimsThreshold -i {dirpath}/{fname} -o {dirpath}/{out_fname} -b -t {aimsThreshold}"
+#     log.debug(thresholdCmd)
+#     os.system(thresholdCmd)
+#     fname = out_fname
+
+#     # MESH
+#     # Generate one mesh per interface (connected component?)
+#     if smoothIt is not None and smoothIt is not 0:
+#         smooth_arg = f"--smooth --smoothIt {smoothIt}"
+#     else:
+#         smooth_arg = ""
+
+#     meshCmd = f'AimsMesh -i {dirpath}/{fname} -o {dirpath}/temp.mesh --decimation --deciMaxError {deciMaxError} --deciMaxClearance {deciMaxClearance} {smooth_arg}'
+#     log.debug(meshCmd)
+#     os.system(meshCmd)
+
+#     # Concatenate the meshes
+#     zcatCmd = f'AimsZCat  -i  {dirpath}/temp*.mesh -o {dirpath}/combined.mesh'
+#     log.debug(zcatCmd)
+#     os.system(zcatCmd)
+
+#     mesh = _aims.read(f"{dirpath}/combined.mesh")
+
+#     assert len(translation) == 3, "len(translation) must be 3"
+
+#     if any(np.array(translation) != 0):
+#         mesh = _mesh.shift_aims_mesh(
+#             mesh, translation, scale=1)
+
+#     # delete the temporary files
+#     _shutil.rmtree(dirpath)
+
+#     return mesh
+
+
+def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
+                   deciMaxError=1.0, deciMaxClearance=3.0,
+                   deciReductionRate=99, smoothRate=0.4,
+                   smoothIt=30, translation=(0, 0, 0)):
+    """
+    Calculate the mesh of the given volume with pyAims.
 
     Args:
-        volume (nparray or pyaims volume): The input volume.
-        smoothingFactor (float, optional): Standard deviation of the 3D isomorph Gaussian filter of the input volume.
-        aimsThreshold (float or str) : First threshold value. All voxels below this value are not considered.
+        volume (nparray or aims Volume): The input volume.
+        gblur_sigma (float, optional): Standard deviation of the 3D isomorph Gaussian filter of the input volume.
+        threshold (float or str) : First threshold value. All voxels below this value are not considered.
             The threshold can be expressed as:
             - a float, representing the threshold intensity
             - a percentage (e.g. "95%") which represents the percentile of low-value pixel to eliminate.
@@ -260,94 +359,87 @@ def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
         smoothIt (int) : Number of mesh smoothing iteration.
         translation (vector or 3 int) : translation to apply to the calculated mesh
 
-    Returns:
-        aims Mesh : the mesh of the inputn volume.
+
+    Return aims.Mesh
     """
 
-    log.debug("volume_to_mesh:")
+    # transform aims.Volume into numpy
+    vol = vol[:]
 
-    v = volume[:]
-    # normalize
-    v = ((v - v.min())/(v.max()-v.min())*256).astype(np.float)
+    assert len(vol.shape) == 3
+    # convert to float
+    vol = vol.astype(np.float64)
 
-    # temporary directory
-    dirpath = tempfile.mkdtemp()
+    # GBLUR
+    gblur = _ndimage.gaussian_filter(vol, gblur_sigma, mode='constant', cval=0)
 
-    fname = "temp_initial.ima"
-    # write volume to file
-    _aims.write(ndarray_to_volume_aims(v), f"{dirpath}/{fname}")
+    # NORMALIZE
+    gblur = (gblur - gblur.min())/(gblur.max() - gblur.min())
 
-    # Gaussian blur
-    if smoothingFactor > 0:
-        out_fname = "temp_smoothed.ima"
-        gaussianSmoothCmd = f'AimsGaussianSmoothing -i {dirpath}/{fname} -o {dirpath}/{out_fname} -x {smoothingFactor} -y {smoothingFactor} -z {smoothingFactor}'
-        log.debug(gaussianSmoothCmd)
-        os.system(gaussianSmoothCmd)
-        fname = out_fname
-
-    # Threshold
-    # read the blurred volume values and calculate the threshold
-    v = _aims.read(f"{dirpath}/{fname}")[:]
-    nonzero_voxels = v[v > 0].flatten()
-    if type(aimsThreshold) == str:
+    # THRESHOLD
+    # NOTE: aims mesher only works with rc_ptr, therefore do not use numpy here
+    # threshold = (gblur > threshold).astype(np.int16)
+    nonzero_voxels = gblur[gblur > 0].flatten()
+    if type(threshold) == str:
         # the threshold is a string
-        if aimsThreshold[-1] == '%':
+        if threshold[-1] == '%':
             # use the percentage value
-            q = float(aimsThreshold[:-1])
-            aimsThreshold = np.percentile(nonzero_voxels, q)
+            q = float(threshold[:-1])
+            threshold = np.percentile(nonzero_voxels, q)
         else:
             raise ValueError(
                 "aimsThreshold must be a float or a string expressing a percentage (eg '90%')")
 
-    out_fname = "temp_threshold.ima"
-    thresholdCmd = f"AimsThreshold -i {dirpath}/{fname} -o {dirpath}/{out_fname} -b -t {aimsThreshold}"
-    log.debug(thresholdCmd)
-    os.system(thresholdCmd)
-    fname = out_fname
+    vol_16 = _aims.Volume_S16((1000*gblur).astype(np.int16))
+    thresholder = _aims.AimsThreshold(
+        _aims.AIMS_GREATER_OR_EQUAL_TO, threshold*1000, dtype=vol_16)
+    thresh_vol = thresholder.bin(vol_16)
 
-    # MESH
-    # Generate one mesh per interface (connected component?)
-    if smoothIt is not None and smoothIt is not 0:
-        smooth_arg = f"--smooth --smoothIt {smoothIt}"
-    else:
-        smooth_arg = ""
+    # mesh
+    m = _aimsalgo.Mesher()
+    m.setDecimation(
+        # deciReductionRate
+        deciReductionRate,
+        # deciMaxClearance
+        deciMaxClearance,
+        # deciMaxError
+        deciMaxError,
+        # deciFeatureAngle
+        180)
+    m.setSmoothing(
+        # smoothType
+        0,
+        # nIteration
+        smoothIt,
+        # smoothRate
+        smoothRate)
 
-    meshCmd = f'AimsMesh -i {dirpath}/{fname} -o {dirpath}/temp.mesh --decimation --deciMaxError {deciMaxError} --deciMaxClearance {deciMaxClearance} {smooth_arg}'
-    log.debug(meshCmd)
-    os.system(meshCmd)
+    mesh_dict = m.doit(thresh_vol)
 
-    # Concatenate the meshes
-    zcatCmd = f'AimsZCat  -i  {dirpath}/temp*.mesh -o {dirpath}/combined.mesh'
-    log.debug(zcatCmd)
-    os.system(zcatCmd)
+    mesh_dict_reduced = {k: _mesh.join_meshes(v) for k, v in mesh_dict.items()}
+    mesh = _mesh.join_meshes(list(mesh_dict_reduced.values()))
 
-    mesh = _aims.read(f"{dirpath}/combined.mesh")
-
+    # TRANSLATION
     assert len(translation) == 3, "len(translation) must be 3"
-
     if any(np.array(translation) != 0):
         mesh = _mesh.shift_aims_mesh(
             mesh, translation, scale=1)
 
-    # delete the temporary files
-    _shutil.rmtree(dirpath)
-
     return mesh
 
 
-def bucket_to_mesh(bucket, smoothingFactor=0, aimsThreshold=1,
-                   deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0), flip=False):
+def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
+                   deciMaxError=1.0, deciMaxClearance=3.0,
+                   deciReductionRate=99, smoothRate=0.4,
+                   smoothIt=30, translation=(0, 0, 0), flip=False):
     """Generate the mesh of the input bucket.
     WARNING: This function directly call some BrainVisa command line tools via os.system calls.
 
     Args:
         bucket (nparray or pyaims bucket): The input bucket.
-        smoothingFactor (float, optional): Standard deviation of the 3D isomorph Gaussian filter of the input volume.
-        aimsThreshold (float or str) : First threshold value. All voxels below this value are not considered.
-        deciMaxError (float) : Maximum error distance from the original mesh (mm).
-        deciMaxClearance (float) : Maximum clearance of the decimation.
-        smoothIt (int) : Number of mesh smoothing iteration.
-        translation (vector or 3 int) : translation to apply to the calculated mesh
+        flip (bool), flip the x coordinate of the bucket before meshing
+
+    see volume_to_mesh for a description of the other arguments
 
     Returns:
         aims Mesh : the mesh of the inputn volume.
@@ -365,14 +457,12 @@ def bucket_to_mesh(bucket, smoothingFactor=0, aimsThreshold=1,
         log.warn(
             "This bucket's coordinates are not integers. Did you apply any transformation to it?")
 
-    # x, y, z = bucket.T
-    # translation = (x.min(), y.min(), z.min())
-
     volume, offset = bucket_numpy_to_volume_numpy(bucket)
+    translation += offset
 
-    return volume_to_mesh(volume, smoothingFactor=smoothingFactor, aimsThreshold=aimsThreshold,
+    return volume_to_mesh(volume, gblur_sigma=gblur_sigma, threshold=threshold, smoothRate=smoothRate,
                           deciMaxError=deciMaxError, deciMaxClearance=deciMaxClearance, smoothIt=smoothIt,
-                          translation=translation+offset)
+                          translation=translation, deciReductionRate=deciReductionRate)
 
 
 def buket_to_aligned_mesh(*args, **kwargs):
