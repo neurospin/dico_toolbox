@@ -96,7 +96,7 @@ def stack_vertex_buckets(vertex, bck_types=BUCKETS_TYPES):
     return stack
 
 
-def stack_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
+def list_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
     """ Stack all buckets of the graph that correspond to needed key values and bucket types.
         Also return values of each vertex for the specified keys.
 
@@ -201,7 +201,16 @@ def stack_buckets(graph, key=None, needed=None, return_keys=None, defaults=None,
 
     # Return a flat vector of bucket points
     if len(return_keys):
-        return _np.vstack(graph_buckets), key_values[return_keys[0]] if return_as_list else key_values
+        return graph_buckets, key_values[return_keys[0]] if return_as_list else key_values
+    return graph_buckets
+
+
+def stack_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
+    """ Stack bucket listed by list_buckets() """
+    graph_buckets, key_values = list_buckets(
+        graph, key, needed, return_keys, defaults, transform, bck_types)
+    if len(return_keys):
+        return _np.vstack(graph_buckets), key_values
     return _np.vstack(graph_buckets)
 
 
