@@ -249,98 +249,6 @@ def add_border(x, thickness, value):
     return x
 
 
-# def volume_to_mesh(volume, smoothingFactor=2.0, aimsThreshold='96%',
-#                    deciMaxError=0.5, deciMaxClearance=1.0, smoothIt=20, translation=(0, 0, 0)):
-#     """Generate the mesh of the input volume.
-#     WARNING: This function directly call some BrainVisa command line tools via os.system calls.
-
-#     Args:
-#         volume (nparray or pyaims volume): The input volume.
-#         smoothingFactor (float, optional): Standard deviation of the 3D isomorph Gaussian filter of the input volume.
-#         aimsThreshold (float or str) : First threshold value. All voxels below this value are not considered.
-#             The threshold can be expressed as:
-#             - a float, representing the threshold intensity
-#             - a percentage (e.g. "95%") which represents the percentile of low-value pixel to eliminate.
-#         deciMaxError (float) : Maximum error distance from the original mesh (mm).
-#         deciMaxClearance (float) : Maximum clearance of the decimation.
-#         smoothIt (int) : Number of mesh smoothing iteration.
-#         translation (vector or 3 int) : translation to apply to the calculated mesh
-
-#     Returns:
-#         aims Mesh : the mesh of the inputn volume.
-#     """
-
-#     log.debug("volume_to_mesh:")
-
-#     v = volume[:]
-#     # normalize
-#     v = ((v - v.min())/(v.max()-v.min())*256).astype(np.float)
-
-#     # temporary directory
-#     dirpath = tempfile.mkdtemp()
-
-#     fname = "temp_initial.ima"
-#     # write volume to file
-#     _aims.write(ndarray_to_volume_aims(v), f"{dirpath}/{fname}")
-
-#     # Gaussian blur
-#     if smoothingFactor > 0:
-#         out_fname = "temp_smoothed.ima"
-#         gaussianSmoothCmd = f'AimsGaussianSmoothing -i {dirpath}/{fname} -o {dirpath}/{out_fname} -x {smoothingFactor} -y {smoothingFactor} -z {smoothingFactor}'
-#         log.debug(gaussianSmoothCmd)
-#         os.system(gaussianSmoothCmd)
-#         fname = out_fname
-
-#     # Threshold
-#     # read the blurred volume values and calculate the threshold
-#     v = _aims.read(f"{dirpath}/{fname}")[:]
-#     nonzero_voxels = v[v > 0].flatten()
-#     if type(aimsThreshold) == str:
-#         # the threshold is a string
-#         if aimsThreshold[-1] == '%':
-#             # use the percentage value
-#             q = float(aimsThreshold[:-1])
-#             aimsThreshold = np.percentile(nonzero_voxels, q)
-#         else:
-#             raise ValueError(
-#                 "aimsThreshold must be a float or a string expressing a percentage (eg '90%')")
-
-#     out_fname = "temp_threshold.ima"
-#     thresholdCmd = f"AimsThreshold -i {dirpath}/{fname} -o {dirpath}/{out_fname} -b -t {aimsThreshold}"
-#     log.debug(thresholdCmd)
-#     os.system(thresholdCmd)
-#     fname = out_fname
-
-#     # MESH
-#     # Generate one mesh per interface (connected component?)
-#     if smoothIt is not None and smoothIt is not 0:
-#         smooth_arg = f"--smooth --smoothIt {smoothIt}"
-#     else:
-#         smooth_arg = ""
-
-#     meshCmd = f'AimsMesh -i {dirpath}/{fname} -o {dirpath}/temp.mesh --decimation --deciMaxError {deciMaxError} --deciMaxClearance {deciMaxClearance} {smooth_arg}'
-#     log.debug(meshCmd)
-#     os.system(meshCmd)
-
-#     # Concatenate the meshes
-#     zcatCmd = f'AimsZCat  -i  {dirpath}/temp*.mesh -o {dirpath}/combined.mesh'
-#     log.debug(zcatCmd)
-#     os.system(zcatCmd)
-
-#     mesh = _aims.read(f"{dirpath}/combined.mesh")
-
-#     assert len(translation) == 3, "len(translation) must be 3"
-
-#     if any(np.array(translation) != 0):
-#         mesh = _mesh.shift_aims_mesh(
-#             mesh, translation, scale=1)
-
-#     # delete the temporary files
-#     _shutil.rmtree(dirpath)
-
-#     return mesh
-
-
 def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
                    deciMaxError=1.0, deciMaxClearance=3.0,
                    deciReductionRate=99, smoothRate=0.4,
@@ -353,7 +261,7 @@ def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
         gblur_sigma (float, optional): Standard deviation of the 3D isomorph Gaussian filter of the input volume.
         threshold (float or str) : First threshold value. All voxels below this value are not considered.
             The threshold can be expressed as:
-            - a float, representing the threshold intensity
+            - a float in [0,1], representing the normalized threshold intensity
             - a percentage (e.g. "95%") which represents the percentile of low-value pixel to eliminate.
         deciMaxError (float) : Maximum error distance from the original mesh (mm).
         deciMaxClearance (float) : Maximum clearance of the decimation.
@@ -371,15 +279,13 @@ def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
     # convert to float
     vol = vol.astype(np.float64)
 
-    # GBLUR
+    # === GBLUR ===
     gblur = _ndimage.gaussian_filter(vol, gblur_sigma, mode='constant', cval=0)
 
-    # NORMALIZE
+    # === NORMALIZE ===
     gblur = (gblur - gblur.min())/(gblur.max() - gblur.min())
 
-    # THRESHOLD
-    # NOTE: aims mesher only works with rc_ptr, therefore do not use numpy here
-    # threshold = (gblur > threshold).astype(np.int16)
+    # === THRESHOLD ===
     nonzero_voxels = gblur[gblur > 0].flatten()
     if type(threshold) == str:
         # the threshold is a string
@@ -391,12 +297,20 @@ def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
             raise ValueError(
                 "aimsThreshold must be a float or a string expressing a percentage (eg '90%')")
 
-    vol_16 = _aims.Volume_S16((1000*gblur).astype(np.int16))
+    MAX_VOXEL_VALUE = 1000
+    threshold *= MAX_VOXEL_VALUE
+
+    vol_16 = _aims.Volume_S16((MAX_VOXEL_VALUE*gblur).astype(np.int16))
     thresholder = _aims.AimsThreshold(
-        _aims.AIMS_GREATER_OR_EQUAL_TO, threshold*1000, dtype=vol_16)
+        _aims.AIMS_GREATER_OR_EQUAL_TO, threshold, dtype=vol_16)
     thresh_vol = thresholder.bin(vol_16)
 
-    # mesh
+    # NOTE: I could not make the mesher work when tresholding with python
+    # gblur *= MAX_VOXEL_VALUE
+    # thresh_vol = np.array( gblur[gblur>threshold], dtype=np.int16, order='F')
+    # thresh_vol = _aims.Volume_S16(thresh_vol)
+
+    # === MESH ===
     m = _aimsalgo.Mesher()
     m.setDecimation(
         # deciReductionRate
@@ -417,10 +331,11 @@ def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
 
     mesh_dict = m.doit(thresh_vol)
 
+    # === JOIN MESHES ===
     mesh_dict_reduced = {k: _mesh.join_meshes(v) for k, v in mesh_dict.items()}
     mesh = _mesh.join_meshes(list(mesh_dict_reduced.values()))
 
-    # TRANSLATION
+    # === TRANSLATION ===
     assert len(translation) == 3, "len(translation) must be 3"
     if any(np.array(translation) != 0):
         mesh = _mesh.shift_aims_mesh(
