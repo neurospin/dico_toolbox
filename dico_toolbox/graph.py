@@ -122,8 +122,8 @@ def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults
             the value is used for all the keys. Default is None.
 
         transform: "ICBM2009c" | "Talairach" | None (opt.)
-            Apply known transformation. Two spaces are available: "Talairach"
-            and "ICBM2009c"(refers to the MNI space used by BrainVISA).
+            Apply known transformation defined in the SPACES_TRANSFORMERS dictionnary.
+            Two spaces are available: "Talairach" and "ICBM2009c"(refers to the MNI space used by BrainVISA).
             None value skip the transformation step.
             Default is None.
 
