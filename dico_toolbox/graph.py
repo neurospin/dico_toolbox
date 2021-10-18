@@ -3,7 +3,7 @@ import os.path as _op
 from . import convert as _convert
 import numpy as _np
 from soma import aims as _aims
-import warnings as _warnings
+from _dev import _deprecation_alert_decorator
 
 
 BUCKETS_TYPES = ['aims_ss', 'aims_other', 'aims_bottom']
@@ -24,20 +24,19 @@ def _check_graph(graph):
     return graph
 
 
-def get_vertices_by(graph, key, needed):
+def get_vertices_by_key(graph, key, needed_values):
     """Return all vertices with given key in the graph"""
-    if not isinstance(needed, list):
-        needed = [needed]
-    out = list(filter(lambda v: v.get(key) in needed,
+    if not isinstance(needed_values, (list, tuple)):
+        needed = [needed_values]
+    out = list(filter(lambda v: v.get(key) in needed_values,
                _check_graph(graph).vertices().list()))
     return out
 
 
+@_deprecation_alert_decorator(use_instead=get_vertices_by_key)
 def get_vertices_by_name(name, graph):
     """Return all vertices with given name in the graph"""
-    _warnings.warn("get_vertices_by_name() is deprecated. Please use get_vertices_by(graph, 'name', name)",
-                   _warnings.DeprecationWarning)
-    return get_vertices_by(graph, 'name', name)
+    return get_vertices_by_key(graph, 'name', name)
 
 
 def _get_property_from_list_of_dict(lst, prop, filt=None):
@@ -96,8 +95,8 @@ def stack_vertex_buckets(vertex, bck_types=BUCKETS_TYPES):
     return stack
 
 
-def list_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
-    """ Stack all buckets of the graph that correspond to needed key values and bucket types.
+def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
+    """ List all buckets of the graph that correspond to needed key values and bucket types.
         Also return values of each vertex for the specified keys.
 
         Parameters
@@ -108,31 +107,33 @@ def list_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, 
         key: str (opt.)
             Select vertices that have key property.
 
-        needed: list | single value (opt.)
+        needed_values: list | single value (opt.)
             Select vertices that have key value equal to one of the needed values.
 
         return_keys: list | str | None (opt.)
-            List of returned key values. If return_keys is a string, values are
-            returned in a list otherwise it is done in a dictionnary.
+            Additionally, this function can extract other properties from each graph vertex.
+            The properties to extract can be indicated in this parameter as a string or a list of str.
+            If a string is given, the function returns a list containing the property values.
+            If a list of string is used, the return is a dictionnary of values corresponding to each given key.
 
         defaults: list | str | None (opt.)
-            When return_keys is not None, if a key is not defined in a vertex, 
+            When return_keys is not None, if a key is not defined in a vertex,
             defaults are used to set up the value. If defaults is a single value,
             the value is used for all the keys. Default is None.
 
         transform: "ICBM2009c" | "Talairach" | None (opt.)
-            Apply known transformation. Two spaces are available: "Talairach" 
+            Apply known transformation. Two spaces are available: "Talairach"
             and "ICBM2009c"(refers to the MNI space used by BrainVISA).
             None value skip the transformation step.
             Default is None.
 
         bck_types: list of str (opt.)
-            Bucket keys used to list points. 
-            Default is ['aims_ss', 'aims_other', 'aims_bottom'].
+            Bucket keys used to list points.
+            Default is ['aims_ss', 'aims_other', 'aims_bottom']., which are the specified in BUCKETS_TYPES.
 
         Return
         ======
-        stacked buckets and values dict (or list if return_keys is a string) if asked.
+        Return a Tuple (buckets, other_values). If return_keys is none, other_values is also none.
 
 
         Examples
@@ -156,9 +157,7 @@ def list_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, 
     """
     if isinstance(graph, dict):
         # It is actually a vertex (because of previous implementation)
-        _warnings.warn("stack_buckets() is now used for graph. Use stack_vertex_buckets instead()",
-                       _warnings.DeprecationWarning)
-        return stack_vertex_buckets(graph, bck_types=BUCKETS_TYPES)
+        raise ValueError("stack_buckets() is now used for graph. Use stack_vertex_buckets instead()")
 
     graph = _check_graph(graph)
 
@@ -166,22 +165,22 @@ def list_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, 
     if key is None:
         vertices = graph.vertices()
     else:
-        if needed is None:
+        if needed_values is None:
             vertices = filter(lambda v: v.get(key) and v.get(
                 'point_number') > 0, graph.vertices().list())
         else:
-            if not isinstance(needed, list):
-                needed = [needed]
-            vertices = filter(lambda v: v.get(key) in needed and v.get(
+            if not isinstance(needed_values, list):
+                needed_values = [needed_values]
+            vertices = filter(lambda v: v.get(key) in needed_values and v.get(
                 'point_number') > 0, graph.vertices().list())
 
-    # Initialize return dictionnay and extend default values if needed
+    # Initialize return dictionnary and extend default values if needed
     return_as_list = False
     if return_keys:
-        if not isinstance(return_keys, list):
+        if not isinstance(return_keys, (list, tuple)):
             return_as_list = True
             return_keys = [return_keys]
-        if not isinstance(defaults, list):
+        if not isinstance(defaults, (list, tuple)):
             defaults = [defaults] * len(return_keys)
         key_values = {k: [] for k in return_keys}
     else:
@@ -202,18 +201,20 @@ def list_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, 
     # Return a flat vector of bucket points
     if len(return_keys):
         return graph_buckets, key_values[return_keys[0]] if return_as_list else key_values
-    return graph_buckets
+    else:
+        return graph_buckets, None
 
 
-def stack_buckets(graph, key=None, needed=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
+def stack_buckets(graph, key=None, needed_values=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
     """ Stack bucket listed by list_buckets() """
     graph_buckets, key_values = list_buckets(
-        graph, key, needed, return_keys, defaults, transform, bck_types)
+        graph, key, needed_values, return_keys, defaults, transform, bck_types)
     if len(return_keys):
         return _np.vstack(graph_buckets), key_values
     return _np.vstack(graph_buckets)
 
 
+@_deprecation_alert_decorator(use_instead=stack_buckets)
 def get_bucket_from_graph_by_suclus_name(graph, sulcus_name, ICBM2009c,
                                          bck_types=BUCKETS_TYPES):
     """
@@ -221,6 +222,4 @@ def get_bucket_from_graph_by_suclus_name(graph, sulcus_name, ICBM2009c,
 
     if ICBM2009c is True, the buckets are transformed into the ICBM2009c Template coordinates.
     """
-    _warnings.warn("get_bucket_from_graph_by_suclus_name() is deprecated. Please use stack_buckets()",
-                   _warnings.DeprecationWarning)
     return stack_buckets(graph, 'name', sulcus_name, "ICBM2009c" if ICBM2009c else None, bck_types)
