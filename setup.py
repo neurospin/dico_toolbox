@@ -3,7 +3,8 @@ import setuptools
 try:
     from aims import soma
 except:
-    ImportError("pyAims could not be imported. It makes no sense to install this package outside a brainvisa environment.")
+    ImportError(
+        "pyAims could not be imported. It makes no sense to install this package outside a brainvisa environment.")
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -11,7 +12,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(name='dico_toolbox',
                  version='0.1.0',
                  description="A common toolbox to the FolDico project",
-                 author='Marco Pascucci',
+                 author='Marco Pascucci, Bastien Cagna',
                  long_description=long_description,
                  long_description_content_type="text/markdown",
                  author_email='marpas.paris@gmail.com',

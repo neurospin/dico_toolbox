@@ -1,4 +1,6 @@
 .vscode
+.idea
+
 *.rst
 
 *.egg-info
@@ -8,3 +10,4 @@ __pycache__/
 scripts/
 
 *.ipynb
+venv
