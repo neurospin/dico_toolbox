@@ -3,7 +3,7 @@ import os.path as _op
 from . import convert as _convert
 import numpy as _np
 from soma import aims as _aims
-from _dev import _deprecation_alert_decorator
+from ._dev import _deprecation_alert_decorator
 
 
 BUCKETS_TYPES = ['aims_ss', 'aims_other', 'aims_bottom']
