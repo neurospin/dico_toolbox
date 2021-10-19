@@ -1,7 +1,6 @@
 .vscode
 .idea
 
-*.rst
 
 *.egg-info
 

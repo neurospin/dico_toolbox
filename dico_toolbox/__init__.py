@@ -13,3 +13,5 @@ try:
 except ImportError:
     _HAS_AIMS = False
     log.warn("Can not import pyAims, are you in a brainvisa environment?")
+
+__version__ = "0.1"
