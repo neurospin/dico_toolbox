@@ -28,6 +28,14 @@ dico\_toolbox\.data module
     :undoc-members:
     :show-inheritance:
 
+dico\_toolbox\.database module
+------------------------------
+
+.. automodule:: dico_toolbox.database
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dico\_toolbox\.graph module
 ---------------------------
 
