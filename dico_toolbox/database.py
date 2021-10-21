@@ -22,7 +22,7 @@ class BVDatabase:
     """
 
         Query system
-        ============        
+        ============
         If kwargs element is a:
             - empty Sequence: all the files that have any value for this attribute are matching
             - value: all the files that have this value for this attribute are matching
@@ -46,7 +46,7 @@ class BVDatabase:
 
         self.path = path
         self.allowed_extensions = [".APC", ".arg", ".csv", ".gii", ".json", ".nii", ".nii.gz", ".trm"]
-    
+
         self.files = []
         self.files_attributes = []
         self.attributes = {}
@@ -81,12 +81,12 @@ class BVDatabase:
                                     if hemi in ['L', 'R']:
                                         # cortex, grey_white,, gw_interface, roots, skeleton
                                         hemi = 'left' if hemi == 'L' else 'right'
-                                        self._add_file(fpath, center=center, subject=sub, modality="t1mri", 
+                                        self._add_file(fpath, center=center, subject=sub, modality="t1mri",
                                                         acquisition=acq, analysis=ana, segmentation=seg_type,
                                                         hemisphere=hemi)
                                     else:
                                         # brain, head, skull_stripped, voronoi
-                                        self._add_file(fpath, center=center, subject=sub, modality="t1mri", 
+                                        self._add_file(fpath, center=center, subject=sub, modality="t1mri",
                                                        acquisition=acq, analysis=ana, segmentation=seg_type)
 
                             if op.isdir(mesh_path):
@@ -102,18 +102,18 @@ class BVDatabase:
                                             # white, hemi
                                             mesh_type = mesh_type[1:]
                                             hemi = 'left' if hemi == 'L' else 'right'
-                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri", 
+                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri",
                                                             acquisition=acq, analysis=ana, mesh=mesh_type,
                                                             hemisphere=hemi)
                                         else:
                                             # head
-                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri", 
-                                                           acquisition=acq, analysis=ana, mesh=mesh_type) 
+                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri",
+                                                           acquisition=acq, analysis=ana, mesh=mesh_type)
 
                         if op.isdir(fold_path):
                             for version in listdir(fold_path):
                                 fold_subpath = op.join(fold_path, version)
-                                
+
                                 for f in listdir(mesh_path):
                                     fpath = op.join(fold_subpath, f)
                                     if op.isfile(fpath):
@@ -126,13 +126,13 @@ class BVDatabase:
                                             # sulcivoronoi (also a segmentation file)
                                             seg_type = seg_type[1:]
                                             hemi = 'left' if hemi == 'L' else 'right'
-                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri", 
+                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri",
                                                             acquisition=acq, analysis=ana, segmentation=seg_type,
                                                             hemisphere=hemi)
                                         else:
                                             # ?
-                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri", 
-                                                            acquisition=acq, analysis=ana, mesh=mesh_type) 
+                                            self._add_file(fpath, center=center, subject=sub, modality="t1mri",
+                                                            acquisition=acq, analysis=ana, mesh=mesh_type)
                                     else:
                                         session = f
                                         for f in listdir(mesh_path):
@@ -143,9 +143,9 @@ class BVDatabase:
 
                                                 if hemi in ['L', 'R']:
                                                     hemi = 'left' if hemi == 'L' else 'right'
-                                                    self._add_file(fpath, center=center, subject=sub, modality="t1mri", 
+                                                    self._add_file(fpath, center=center, subject=sub, modality="t1mri",
                                                                     acquisition=acq, analysis=ana, hemisphere=hemi,
-                                                                    graph_version=version, graph_session=session)                                          
+                                                                    graph_version=version, graph_session=session)
 
 
     def _add_file(self, path, **kwargs):
@@ -160,7 +160,7 @@ class BVDatabase:
         if ext not in self.allowed_extensions:
             return
         kwargs['extension'] = ext
-        
+
         # TODO: use .minf to get more attributes?
         self.files.append(path,)
         self.files_attributes.append(kwargs)
@@ -206,7 +206,7 @@ class BVDatabase:
         for k in kwargs.keys():
             if not isinstance(kwargs[k], Sequence):
                 kwargs[k] = [kwargs[k]]
-                
+
         results = set()
         for attributes in self.files_attributes:
             if attribute_name in attributes.keys():
@@ -225,7 +225,7 @@ class BVDatabase:
         for k in kwargs.keys():
             if not isinstance(kwargs[k], Sequence):
                 kwargs[k] = [kwargs[k]]
-                
+
         results = []
         for path, attributes in zip(self.files, self.files_attributes):
             for k in kwargs.keys():
