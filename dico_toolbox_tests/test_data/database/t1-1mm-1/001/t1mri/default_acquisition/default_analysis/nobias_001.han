@@ -1,0 +1,11 @@
+sequence: unknown
+csf: mean: -1 sigma: -1
+gray: mean: 232 sigma: 24
+white: mean: 340 sigma: 16
+candidate 0: mean: -1 sigma: -1
+candidate 1: mean: -1 sigma: -1
+candidate 2: mean: -1 sigma: -1
+candidate 3: mean: -1 sigma: -1
+candidate 4: mean: -1 sigma: -1
+candidate 5: mean: -1 sigma: -1
+undersampling: 4
