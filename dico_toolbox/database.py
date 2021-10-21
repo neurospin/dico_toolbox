@@ -5,10 +5,10 @@ from collections.abc import Sequence
 from glob import glob
 
 
-def create_test_database():
+def create_test_database(use_template=False):
     db_path = op.abspath(op.join(__file__, "..", "..",
                                  "dico_toolbox_tests", "test_data", "database"))
-    return BVDatabase(db_path)
+    return BVDatabase(db_path, use_templates=use_template)
 
 
 def infer_file_type(fpath, attributes):
@@ -16,12 +16,14 @@ def infer_file_type(fpath, attributes):
     # TODO: list file type somewhere
     if attributes['extension'] == '.arg':
         return "graph"
+    elif attributes['extension'] == '.his':
+        return "histogram"
     return "unkown"
 
 
 def extend_templates(templates, default_value=None, start_tag="[", end_tag="]", **kwargs):
     """ """
-    if not isinstance(templates, Sequence):
+    if not isinstance(templates, (list, tuple)):
         templates = [templates]
 
     if default_value is not None:
@@ -34,22 +36,24 @@ def extend_templates(templates, default_value=None, start_tag="[", end_tag="]", 
                 ssplit = sp.split(end_tag)
                 if len(ssplit) > 1 and not ssplit[0] in used_keys:
                     unused_keys.add(ssplit[0])
-        for template in templates:
-            for key in unused_keys:
-                template.replace(start_tag + key + end_tag, default_value)
+
+        for key in unused_keys:
+            for it, template in enumerate(templates):
+                templates[it] = template.replace(
+                    start_tag + key + end_tag, default_value)
 
     # Then list all possibilities
     for k in used_keys:
         tag = start_tag + k + end_tag
-        if not isinstance(kwargs[k], Sequence):
+        if not isinstance(kwargs[k], (list, tuple)):
             kwargs[k] = [kwargs[k]]
+        new_templates = []
         for template in templates:
             if tag in template:
                 for val in kwargs[k]:
-                    templates.append(template.replace(
+                    new_templates.append(template.replace(
                         start_tag + k + end_tag, val))
-                # Remove the old template (which still have the original tag)
-                templates.remove(template)
+        templates = new_templates
 
     return templates
 
@@ -86,7 +90,7 @@ class BVDatabase:
         self.use_templates = use_templates
 
         self.allowed_extensions = [
-            ".APC", ".arg", ".csv", ".gii", ".json", ".nii", ".nii.gz", ".trm"]
+            ".APC", ".arg", ".csv", ".gii", ".han", ".his", ".json", ".nii", ".nii.gz", ".trm"]
 
         self.files = []
         self.files_attributes = []
@@ -152,9 +156,20 @@ class BVDatabase:
                         # for ana in self.list_all('subject', center=center, subject=sub, modality="t1mri", acquisition=acq):
                         ana_path = op.join(
                             self.path, center, sub, modality, acq, ana)
+                        if not op.isdir(ana_path):
+                            continue
                         seg_path = op.join(ana_path, "segmentation")
                         mesh_path = op.join(seg_path, "mesh")
                         fold_path = op.join(ana_path, "folds")
+
+                        for f in listdir(ana_path):
+                            fpath = op.join(ana_path, f)
+                            if op.isfile(fpath):
+                                self._add_file(
+                                    fpath, center=center, subject=sub, modality=modality,
+                                    acquisition=acq, analysis=ana)
+
+                        # Segmented volumes
                         if op.isdir(seg_path):
                             for f in listdir(seg_path):
                                 fpath = op.join(seg_path, f)
@@ -174,7 +189,7 @@ class BVDatabase:
                                         # brain, head, skull_stripped, voronoi
                                         self._add_file(fpath, center=center, subject=sub, modality=modality,
                                                        acquisition=acq, analysis=ana, segmentation=seg_type)
-
+                            # Meshes
                             if op.isdir(mesh_path):
                                 for f in listdir(mesh_path):
                                     fpath = op.join(mesh_path, f)
@@ -195,19 +210,18 @@ class BVDatabase:
                                             # head
                                             self._add_file(fpath, center=center, subject=sub, modality=modality,
                                                            acquisition=acq, analysis=ana, mesh=mesh_type)
-
+                        # Graphs
                         if op.isdir(fold_path):
                             for version in listdir(fold_path):
                                 fold_subpath = op.join(fold_path, version)
 
-                                for f in listdir(mesh_path):
+                                for f in listdir(fold_subpath):
                                     fpath = op.join(fold_subpath, f)
                                     if op.isfile(fpath):
                                         # [hemi][subject]_[seg_type].[extension]
                                         fname, _ = op.splitext(f)
                                         seg_type = fname[len(sub)+1:]
                                         hemi = fname[0]
-
                                         if hemi in ['L', 'R']:
                                             # sulcivoronoi (also a segmentation file)
                                             seg_type = seg_type[1:]
@@ -221,13 +235,14 @@ class BVDatabase:
                                                            acquisition=acq, analysis=ana, mesh=mesh_type)
                                     else:
                                         session = f
-                                        for f in listdir(mesh_path):
-                                            fpath = op.join(
-                                                mesh_path, session, f)
+                                        session_path = op.join(
+                                            fold_subpath, session)
+                                        for f in listdir(session_path):
+                                            fpath = op.join(session_path, f)
                                             if op.isfile(fpath) and f[-4:] == ".arg":
                                                 # [hemi][subject]_[session].arg
+                                                fname, _ = op.splitext(f)
                                                 hemi = fname[0]
-
                                                 if hemi in ['L', 'R']:
                                                     hemi = 'left' if hemi == 'L' else 'right'
                                                     self._add_file(fpath, center=center, subject=sub, modality=modality,
@@ -251,7 +266,7 @@ class BVDatabase:
             >>>subject = db.list_all("subject", center="center1")
         """
         for k in kwargs.keys():
-            if not isinstance(kwargs[k], Sequence):
+            if not isinstance(kwargs[k], (list, tuple)):
                 kwargs[k] = [kwargs[k]]
 
         results = set()
@@ -270,7 +285,7 @@ class BVDatabase:
     def get(self, **kwargs):
         """ Use the same query system that for list_all but list all matching files paths. """
         for k in kwargs.keys():
-            if not isinstance(kwargs[k], Sequence):
+            if not isinstance(kwargs[k], (list, tuple)):
                 kwargs[k] = [kwargs[k]]
 
         results = []
@@ -295,8 +310,12 @@ class BVDatabase:
                                               subject=["sub-01", "sub-05"], session="session_manual", hemi="L")
         """
 
-        file_paths = glob(extend_templates(
-            op.join(self.path, template), default_value="*", **kwargs))
+        paths = extend_templates(
+            op.join(self.path, template), default_value="*", **kwargs)
+
+        file_paths = []
+        for p in paths:
+            file_paths.extend(glob(p))
 
         results = []
         for fpath in file_paths:

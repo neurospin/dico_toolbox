@@ -1,5 +1,12 @@
+import unittest
 import dico_toolbox as dtb
 
-def test_list_buckets():
-    graph_path = "test_data/graph.bck"
-    buckets = dtb.graph.list_buckets(graph_path, transform="Talairach")
+
+class TestGraph(unittest.TestCase):
+    def test_list_buckets():
+        graph_path = dtb.database.create_test_database().get(type="graph")[0]
+        buckets = dtb.graph.list_buckets(graph_path, transform="Talairach")
+
+
+if __name__ == '__main__':
+    unittest.main()
