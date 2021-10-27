@@ -1,7 +1,6 @@
 
 import unittest
 from dico_toolbox.database import create_test_database, extend_templates
-import os.path as op
 
 
 class TestDatabaseUtils(unittest.TestCase):
@@ -22,14 +21,13 @@ class TestDatabaseMethods(unittest.TestCase):
     def test_database(self):
         db = create_test_database()
         assert len(db.list_all('subject')) == 2
-        assert len(db.get(subject='001')) == 28
+        assert len(db.get(subject='001')) == 29
 
     def test_database_with_templates(self):
-        db = create_test_database(use_template=True)
+        db = create_test_database()
         fpaths = db.get_from_template(
-            "[center]/[subject]/t1mri/[acq]/[ana]/folds/[version]/[session]/[hemi][subject]_[session].arg",
+            "morphologist_labelled_graph",
             subject=['001'], version='3.3', session="session1_manual", hemi=["L", "R"])
-
         assert len(fpaths) == 2
 
 

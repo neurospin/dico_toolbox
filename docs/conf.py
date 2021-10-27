@@ -33,7 +33,7 @@ extensions = [
     'numpydoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
-    'nbsphinx',
+    # 'nbsphinx',
     # 'sphinx_gallery.gen_gallery',
     # 'sphinxcontrib.fulltoc'
 ]

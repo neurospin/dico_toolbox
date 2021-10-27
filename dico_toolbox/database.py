@@ -1,24 +1,9 @@
 import os.path as op
 from os import listdir
-from typing import Sequence, SupportsComplex
+from typing import Union
 from collections.abc import Sequence
 from glob import glob
-
-
-def create_test_database(use_template=False):
-    db_path = op.abspath(op.join(__file__, "..", "..",
-                                 "dico_toolbox_tests", "test_data", "database"))
-    return BVDatabase(db_path, use_templates=use_template)
-
-
-def infer_file_type(fpath, attributes):
-    """ Infer Axon file type from the path and attributes """
-    # TODO: list file type somewhere
-    if attributes['extension'] == '.arg':
-        return "graph"
-    elif attributes['extension'] == '.his':
-        return "histogram"
-    return "unkown"
+from warnings import warn
 
 
 def extend_templates(templates, default_value=None, start_tag="[", end_tag="]", **kwargs):
@@ -58,67 +43,98 @@ def extend_templates(templates, default_value=None, start_tag="[", end_tag="]", 
     return templates
 
 
-class BVDatabase:
-    """
+FILES_COUNT_WARNING = 500
 
-        Query system
-        ============
-        If kwargs element is a:
-            - empty Sequence: all the files that have any value for this attribute are matching
-            - value: all the files that have this value for this attribute are matching
-            - Sequence: all the files that have one of the values for this attribute are matching
-        Files must match all kwargs to be listed.
 
-        Example
-        =======
-        '''python
-            db = BVDatabase("/path/to/the/database")
-            # Get the path of the left white mesh of trucmuche
-            wmesh_path = db.get(subject='trucmuche', mesh='white', hemi='left)
-
-            # Get all the graph
-            graph = db.get(type="graph")
-        '''
-    """
-
-    def __init__(self, path: str, use_templates=False):
+class FileDatabase:
+    def __init__(self, path: str, directory_levels=[], templates: dict = {},
+                 allowed_extensions="*", forbidden_extensions=[]):
         if not op.isdir(path):
             raise IOError(
                 "The database path must point to an existing directory.")
-
         self.path = path
-        self.use_templates = use_templates
+        self.allowed_extensions = allowed_extensions
+        self.forbidden_extensions = forbidden_extensions
 
-        self.allowed_extensions = [
-            ".APC", ".arg", ".csv", ".gii", ".han", ".his", ".json", ".nii", ".nii.gz", ".trm"]
+        self.templates = templates
+        self.directory_levels = directory_levels
 
         self.files = []
         self.files_attributes = []
-        self.attributes = {}
+        self.attributes = []
 
-        if not use_templates:
-            # Expect output as:
-            # db/center/subject/acqusition/analysis/segmentation
-            # db/center/subject/acqusition/analysis/folds
-            # TODO: add unscan _attributes?
-            # FIXME: analysis cannot be listed as we do not go into the foldeer to list files
-            self.unscan_paths = self._scan_subdirectories(
-                self.path, ["center", "subject", "modality", "acquisition", "analysis"])
+    def is_valid_path(self, path: str):
+        if not op.isfile(path):
+            return False
+        ext = op.splitext(path)[1][1:]
 
-            self._scan_morphologist_analyses()
+        if self.allowed_extensions == "*":
+            return ext not in self.forbidden_extensions
+
+        return ext in self.allowed_extensions and ext not in self.forbidden_extensions
+
+    # TODO: add possibility to specify integer values in templates (+ formating)
+    def get_from_template(self, template, **kwargs):
+        """ Search files by parsing a template
+
+            Example
+            ========
+            >>>> graph = db.get_from_template("*/[subject]/t1mr1/*/*/folds/3.3/[session]/[hemi][session]_[subject].arg",
+                                                subject=["sub-01", "sub-05"], session="session_manual", hemi="L")
+        """
+        if template in self.templates:
+            template = self.templates[template]
+
+        paths = extend_templates(
+            op.join(self.path, template), default_value="*", **kwargs)
+
+        file_paths = []
+        for p in paths:
+            file_paths.extend(glob(p))
+
+        results = []
+        for fpath in file_paths:
+            if self.is_valid_path(fpath):
+                results.append(fpath)
+        return results
+
+    def generate_paths_from_templates(self, templates, start_tag="[", end_tag="]", **kwargs):
+        """ Usefull to generate new files paths """
+        if not isinstance(templates, (tuple, list)):
+            templates = [templates]
+
+        for t in range(len(templates)):
+            if templates[t] in self.templates:
+                templates[t] = self.templates[templates[t]]
+
+        for k in kwargs.keys():
+            tag = start_tag + k + end_tag
+            if not isinstance(kwargs[k], (list, tuple)):
+                kwargs[k] = [kwargs[k]]
+            new_templates = []
+            for template in templates:
+                if tag in template:
+                    for val in kwargs[k]:
+                        new_templates.append(template.replace(
+                            start_tag + k + end_tag, val))
+            templates = new_templates
+
+        return templates
 
     def _add_file(self, path, **kwargs):
-        if not op.isfile(path):
-            raise ValueError("{} is not a file".format(path))
-        if path in self.files:
-            raise ValueError("{} already listed".format(path))
-
-        _, ext = op.splitext(path)
-        if ext == ".gz":
-            ext = '.' + '.'.join(op.split(path)[1].split('.')[-2:])
-        if ext not in self.allowed_extensions:
+        if not self.is_valid_path(path) or path in self.files:
             return
+
+        if len(self.files) == FILES_COUNT_WARNING:
+            warn("Database seems to be large. You might consider to use path template "
+                 "instead of use methods that require to scan all the database")
+
+        ext = op.splitext(path)[1][1:]
+        # if ext == "gz":
+        #     ext = '.'.join(op.split(path)[1].split('.')[-2:])
         kwargs['extension'] = ext
+
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
         # TODO: use .minf to get more attributes?
         self.files.append(path,)
@@ -146,6 +162,143 @@ class BVDatabase:
             else:
                 self._add_file(item_path, **kwargs)
         return not_scanned_paths
+
+    def scan(self):
+        self.files = []
+        self.files_attributes = []
+        self.attributes = {}
+
+        # Expect output as:
+        # db/center/subject/acqusition/analysis/segmentation
+        # db/center/subject/acqusition/analysis/folds
+        # TODO: add unscan _attributes?
+        # FIXME: analysis cannot be listed as we do not go into the foldeer to list files
+        self.unscan_paths = self._scan_subdirectories(
+            self.path, self.directory_levels)
+
+    def list_all(self, attribute_name: str, **kwargs):
+        """ List all attribute_name attribute for files that match kwargs specificiation.
+
+            Parameters
+            ==========
+            attribute_name: str
+                Files attribute name to check. (Example: "center", "acquisition", "extension", "mesh",...)
+
+            Return
+            ======
+            The list of different values seen for attribute_name
+
+            Example
+            =======
+            >>>subject = db.list_all("subject", center="center1")
+        """
+        if len(self.files) == 0:
+            self.scan()
+
+        for k in kwargs.keys():
+            if not isinstance(kwargs[k], (list, tuple)):
+                kwargs[k] = [kwargs[k]]
+
+        results = set()
+        for attributes in self.files_attributes:
+            if attribute_name in attributes.keys():
+                add = True
+                # If one of the required attribute is not ok, do not add
+                for k in kwargs.keys():
+                    if k not in attributes.keys() or (len(kwargs[k]) > 0 and attributes[k] not in kwargs[k]):
+                        add = False
+                        break
+                if add:
+                    results.add(attributes[attribute_name])
+        return list(results)
+
+    def get(self, **kwargs):
+        """ Use the same query system that for list_all but list all matching files paths. """
+        if len(self.files) == 0:
+            self.scan()
+
+        for k in kwargs.keys():
+            if not isinstance(kwargs[k], (list, tuple)):
+                kwargs[k] = [kwargs[k]]
+
+        results = []
+        for path, attributes in zip(self.files, self.files_attributes):
+            for k in kwargs.keys():
+                add = True
+                for k in kwargs.keys():
+                    if k not in attributes.keys() or (len(kwargs[k]) > 0 and attributes[k] not in kwargs[k]):
+                        add = False
+                        break
+                if add:
+                    results.append(path)
+                    break
+        return results
+
+    def get_attribute_of(self, path: str) -> dict():
+        # TODO: implement this
+        raise NotImplementedError()
+
+
+def create_test_database():
+    db_path = op.abspath(op.join(__file__, "..", "..",
+                                 "dico_toolbox_tests", "test_data", "database"))
+    return BVDatabase(db_path)
+
+
+def infer_file_type(fpath, attributes):
+    """ Infer Axon file type from the path and attributes """
+    # TODO: list file type somewhere
+    if attributes['extension'] == '.arg':
+        return "graph"
+    elif attributes['extension'] == '.his':
+        return "histogram"
+    return "unkown"
+
+
+BV_TEMPLATES = {
+    "morpgologist_graph": "[center]/[subject]/t1mri/[acquisition]/[analysis]/folds/[version]/[hemi][subject].arg",
+    "morphologist_labelled_graph": "[center]/[subject]/t1mri/[acquisition]/[analysis]/folds/[version]/[session]/[hemi][subject]_[session].arg",
+    "morphologist_mesh": "[center]/[subject]/t1mri/[acquisition]/[analysis]/segmentation/mesh/[subject]_[hemi][type].[extension]",
+    "morphologist_segmentation": "[center]/[subject]/t1mri/[acquisition]/[analysis]/segmentation/[hemi][type]_[subject].[extension]",
+}
+
+
+class BVDatabase(FileDatabase):
+    """
+
+        Query system
+        ============
+        If kwargs element is a:
+            - empty Sequence: all the files that have any value for this attribute are matching
+            - value: all the files that have this value for this attribute are matching
+            - Sequence: all the files that have one of the values for this attribute are matching
+        Files must match all kwargs to be listed.
+
+        Example
+        =======
+        '''python
+            db = BVDatabase("/path/to/the/database")
+            # Get the path of the left white mesh of trucmuche
+            wmesh_path = db.get(subject='trucmuche', mesh='white', hemi='left)
+
+            # Get all the graph
+            graph = db.get(type="graph")
+        '''
+    """
+
+    def __init__(self, path: str):
+        super().__init__(
+            path,
+            templates=BV_TEMPLATES,
+            directory_levels=["center", "subject",
+                              "modality", "acquisition", "analysis"],
+            forbidden_extensions=['minf']
+        )
+
+    def _add_file(self, path, **kwargs):
+        super()._add_file(path, **kwargs)
+        # TODO: use .minf to get more attributes?
+        # self.files_attributes[-1]['type'] = infer_file_type(path, kwargs)
 
     def _scan_morphologist_analyses(self, modality="t1mri"):
         # Look for Morphologist outputs
@@ -176,7 +329,8 @@ class BVDatabase:
                                 if op.isfile(fpath):
                                     # [hemi][seg_type]_[subject].[extension]
                                     fname, _ = op.splitext(f)
-                                    seg_type = fname[:-len(sub)-1]
+                                    seg_type = fname[:-len(sub)-1] if len(
+                                        fname) > len(sub) else None
                                     hemi = f[0]
 
                                     if hemi in ['L', 'R']:
@@ -196,8 +350,9 @@ class BVDatabase:
                                     if op.isfile(fpath):
                                         # [subject]_[hemi][seg_type].[extension]
                                         fname, _ = op.splitext(f)
-                                        mesh_type = fname[len(sub)+1:]
-                                        hemi = mesh_type[0]
+                                        mesh_type = fname[len(
+                                            sub)+1:] if len(fname) > len(sub) else None
+                                        hemi = mesh_type[0] if mesh_type else None
 
                                         if hemi in ['L', 'R']:
                                             # white, hemi
@@ -220,7 +375,8 @@ class BVDatabase:
                                     if op.isfile(fpath):
                                         # [hemi][subject]_[seg_type].[extension]
                                         fname, _ = op.splitext(f)
-                                        seg_type = fname[len(sub)+1:]
+                                        seg_type = fname[len(
+                                            sub)+1:] if len(fname) > len(sub) else None
                                         hemi = fname[0]
                                         if hemi in ['L', 'R']:
                                             # sulcivoronoi (also a segmentation file)
@@ -249,76 +405,6 @@ class BVDatabase:
                                                                    acquisition=acq, analysis=ana, hemisphere=hemi,
                                                                    graph_version=version, graph_session=session)
 
-    def list_all(self, attribute_name: str, **kwargs):
-        """ List all attribute_name attribute for files that match kwargs specificiation.
-
-            Parameters
-            ==========
-            attribute_name: str
-                Files attribute name to check. (Example: "center", "acquisition", "extension", "mesh",...)
-
-            Return
-            ======
-            The list of different values seen for attribute_name
-
-            Example
-            =======
-            >>>subject = db.list_all("subject", center="center1")
-        """
-        for k in kwargs.keys():
-            if not isinstance(kwargs[k], (list, tuple)):
-                kwargs[k] = [kwargs[k]]
-
-        results = set()
-        for attributes in self.files_attributes:
-            if attribute_name in attributes.keys():
-                add = True
-                # If one of the required attribute is not ok, do not add
-                for k in kwargs.keys():
-                    if k not in attributes.keys() or (len(kwargs[k]) > 0 and attributes[k] not in kwargs[k]):
-                        add = False
-                        break
-                if add:
-                    results.add(attributes[attribute_name])
-        return list(results)
-
-    def get(self, **kwargs):
-        """ Use the same query system that for list_all but list all matching files paths. """
-        for k in kwargs.keys():
-            if not isinstance(kwargs[k], (list, tuple)):
-                kwargs[k] = [kwargs[k]]
-
-        results = []
-        for path, attributes in zip(self.files, self.files_attributes):
-            for k in kwargs.keys():
-                add = True
-                for k in kwargs.keys():
-                    if k not in attributes.keys() or (len(kwargs[k]) > 0 and attributes[k] not in kwargs[k]):
-                        add = False
-                        break
-                if add:
-                    results.append(path)
-                    break
-        return results
-
-    def get_from_template(self, template, **kwargs):
-        """ Search files by parsing a template 
-
-            Example
-            ========
-            >>>> graph = db.get_from_template("*/[subject]/t1mr1/*/*/folds/3.3/[session]/[hemi][session]_[subject].arg",
-                                              subject=["sub-01", "sub-05"], session="session_manual", hemi="L")
-        """
-
-        paths = extend_templates(
-            op.join(self.path, template), default_value="*", **kwargs)
-
-        file_paths = []
-        for p in paths:
-            file_paths.extend(glob(p))
-
-        results = []
-        for fpath in file_paths:
-            if op.isfile(fpath):
-                results.append(fpath)
-        return results
+    def scan(self):
+        super().scan()
+        self._scan_morphologist_analyses()
