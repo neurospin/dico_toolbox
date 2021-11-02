@@ -8,6 +8,9 @@ from . import graph
 from . import skeleton
 from . import bucket
 from . import test_data
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     from soma import aims as _aims
