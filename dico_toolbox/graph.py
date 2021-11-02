@@ -6,6 +6,7 @@ from soma import aims as _aims
 from ._dev import _deprecation_alert_decorator
 
 
+
 BUCKETS_TYPES = ['aims_ss', 'aims_other', 'aims_bottom']
 SPACES_TRANSFORMERS = {
     None: lambda graph: None,
@@ -90,7 +91,6 @@ def stack_vertex_buckets(vertex, bck_types=BUCKETS_TYPES):
         stack = _np.vstack(vertex_bcks)
     except:
         stack = None
-        print(vertex)
 
     return stack
 
@@ -133,7 +133,7 @@ def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults
 
         Return
         ======
-        Return a Tuple (buckets, other_values). If return_keys is none, other_values is also none.
+        Return a Tuple (buckets, other_values). If return_keys is none, other_values is an empty dictionnary.
 
 
         Examples
@@ -207,7 +207,7 @@ def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults
     if return_keys is not None:
         return graph_buckets, key_values[return_keys[0]] if return_as_list else key_values
     else:
-        return graph_buckets, None
+        return graph_buckets, {}
 
 
 def stack_buckets(graph, key=None, needed_values=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
