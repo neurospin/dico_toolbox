@@ -9,7 +9,7 @@ from ._dev import _deprecation_alert_decorator
 BUCKETS_TYPES = ['aims_ss', 'aims_other', 'aims_bottom']
 SPACES_TRANSFORMERS = {
     None: lambda graph: None,
-    # "ICBM2009c": _aims.GraphManip.getICBM2009cTemplateTransform,
+    "ICBM2009c": _aims.GraphManip.getICBM2009cTemplateTransform,
     "Talairach": _aims.GraphManip.talairach
 }
 
