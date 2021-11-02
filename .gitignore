@@ -9,3 +9,5 @@ scripts/
 
 *.ipynb
 venv
+
+.pytest_cache/

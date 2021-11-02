@@ -48,6 +48,29 @@ part are specified by using a tag like "[variable_name]".
     skeletons = db.get_from_template("morphologist_segmentation", type='skeleton', 
                                      subject=['sub-01', 'sub-02'], hemi='L')
 
+If needed the bv_database() function can be used to get a demo dataset containing 2 subjects.
+
+
+Test Data
+---------
+Data used for test and demo are automatically downloaded from distant server by the test_data module.
+By default the data are saved in the dico_toolbox_tests subfolder of the project. Setting the 
+'DICO_TOOLBOX_DATA_DIR' environment variable can be used to specify a custom location.
+
+.. code-block:: python
+    
+    import os
+    from dico_toolbox.test_data import bv_database
+
+    # Create the environment variable (usually done in a bash)
+    os.environ['DICO_TOOLBOX_DATA_DIR'] = "/my/custom/data/path"
+
+    test_database = bv_database()
+
+If you already have test data and don't want to copy them you can set the 'DICO_TOOLBOX_SOURCE_DIR'
+environment variable to use them instead of the default ones.
+
 
 Graphs
 ------
+

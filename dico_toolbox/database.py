@@ -239,12 +239,6 @@ class FileDatabase:
         raise NotImplementedError()
 
 
-def create_test_database():
-    db_path = op.abspath(op.join(__file__, "..", "..",
-                                 "dico_toolbox_tests", "test_data", "database"))
-    return BVDatabase(db_path)
-
-
 def infer_file_type(fpath, attributes):
     """ Infer Axon file type from the path and attributes """
     # TODO: list file type somewhere

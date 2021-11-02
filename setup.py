@@ -1,5 +1,12 @@
 import setuptools
 import os.path as op
+import re
+
+
+def get_property(prop, project):
+    result = re.search(
+        r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop), open(project + '/__init__.py').read())
+    return result.group(1)
 
 
 try:
@@ -11,8 +18,9 @@ except:
 with open(op.join(op.split(__file__)[0], "README.md"), "r") as fh:
     long_description = fh.read()
 
+
 setuptools.setup(name='dico_toolbox',
-                 version='0.1.0',
+                 version=get_property('__version__', 'dico_toolbox'),
                  description="A common toolbox to the FoldDico project",
                  author='Marco Pascucci, Bastien Cagna',
                  long_description=long_description,
