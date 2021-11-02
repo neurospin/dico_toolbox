@@ -78,7 +78,7 @@ def data_directory(version=None) -> str:
     if os.getenv(ENV_PATH_VAR):
         # User defined
         root = os.getenv(ENV_PATH_VAR)
-        warn("Using environment defined data directory:", root)
+        warn("Using environment defined data directory: {}".format(root))
     else:
         # Default
         root = DEFAULT_DATA_PATH
@@ -118,7 +118,7 @@ def load_data(source=None, version=None, path=None, force=False) -> str:
     if source is None and ENV_SOURCE_PATH_VAR in os.environ:
         source = os.environ[ENV_SOURCE_PATH_VAR]
         if source is not None:
-            warn("Using environment defined source:", source)
+            warn("Using environment defined source: {}".format(source))
 
     # If a source is specified:
     #   if it is a valid path: copy the data only if force is True otherwise, return the source path

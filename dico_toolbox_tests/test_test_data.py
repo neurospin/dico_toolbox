@@ -1,6 +1,7 @@
 from dico_toolbox import test_data
 import pytest
-from dico_toolbox.test_data import _check_version, bv_database, data_directory, _is_url, load_data, DEFAULT_DATA_PATH, ENV_PATH_VAR
+from dico_toolbox.test_data import ENV_SOURCE_PATH_VAR, _check_version, bv_database, data_directory, \
+    _is_url, load_data, DEFAULT_DATA_PATH, ENV_PATH_VAR, ENV_SOURCE_PATH_VAR
 import dico_toolbox as dtb
 import os.path as op
 import os
@@ -38,7 +39,10 @@ def test_is_url():
 
 
 def test_load_data():
-    del os.environ[ENV_PATH_VAR]
+    if ENV_PATH_VAR in os.environ:
+        del os.environ[ENV_PATH_VAR]
+    if ENV_SOURCE_PATH_VAR in os.environ:
+        del os.environ[ENV_SOURCE_PATH_VAR]
 
     # Load data at default location
     dt_path = load_data()
@@ -50,7 +54,8 @@ def test_load_data():
     assert path == dt_path
 
     # Copy from default location to custom one
-    cdt_path = load_data(source=dt_path, force=True)
+    os.environ[ENV_SOURCE_PATH_VAR] = dt_path
+    cdt_path = load_data(force=True)
     assert cdt_path == op.join(os.environ[ENV_PATH_VAR], _check_version())
     assert op.isdir(cdt_path)
     assert len(os.listdir(cdt_path)) == len(os.listdir(dt_path))
@@ -58,6 +63,7 @@ def test_load_data():
     shutil.rmtree(op.realpath(op.join(dt_path, '..')))
     shutil.rmtree(os.environ[ENV_PATH_VAR])
     del os.environ[ENV_PATH_VAR]
+    del os.environ[ENV_SOURCE_PATH_VAR]
 
 
 def test_bv_database():
