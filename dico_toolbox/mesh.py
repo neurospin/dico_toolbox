@@ -1,5 +1,6 @@
 from soma import aims as _aims
 import numpy as _np
+from . import transform as _transform
 
 def rescale_mesh(mesh, dxyz):
     """Rescale a mesh by multiplying its vertices with the factors in dxyx.
@@ -10,12 +11,26 @@ def rescale_mesh(mesh, dxyz):
 
 
 def flip_mesh(mesh, axis=0):
-    """Flip the mesh by inverting the specified axis"""
+    """Flip the mesh by inverting the specified axis.
+    
+    This function modifies the input mesh.
+    
+    Return None."""
     flip_v = _np.ones(3)
     flip_v[axis] = -1
     for i in range(mesh.size()):
         mesh.vertex(i).assign(
             [_aims.Point3df(_np.array(x[:])*flip_v) for x in mesh.vertex(i)])
+
+
+def transform_mesh(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
+    """Applay an affine tranformation to the mesh.
+    The tranformation happens in-place, the input mesh is motified.
+
+    Return None.
+    """
+    M = _transform.get_aims_affine_transform(rot_matrix, transl_vec)
+    _aims.SurfaceManip.meshTransform(mesh, M)
 
 
 def shift_aims_mesh(mesh, offset, scale=1):
