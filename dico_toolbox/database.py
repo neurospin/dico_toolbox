@@ -1,5 +1,6 @@
 import os.path as op
 from os import listdir
+import os
 from typing import Union
 from collections.abc import Sequence
 from glob import glob
@@ -98,7 +99,7 @@ class FileDatabase:
                 results.append(fpath)
         return results
 
-    def generate_paths_from_templates(self, templates, start_tag="[", end_tag="]", **kwargs):
+    def generate_from_templates(self, templates, start_tag="[", end_tag="]", makedirs=False, **kwargs):
         """ Usefull to generate new files paths """
         if not isinstance(templates, (tuple, list)):
             templates = [templates]
@@ -119,7 +120,14 @@ class FileDatabase:
                             start_tag + k + end_tag, val))
             templates = new_templates
 
+        if makedirs:
+            for templ in templates:
+                d, _ = op.split(templ)
+                os.makedirs(d, exist_ok=True)
         return templates
+
+    def generate_from_template(self, template, start_tag="[", end_tag="]", makedirs=False, **kwargs):
+        return self.generate_from_templates(template, start_tag, end_tag, makedirs, **kwargs)[0]
 
     def _add_file(self, path, **kwargs):
         if not self.is_valid_path(path) or path in self.files:
