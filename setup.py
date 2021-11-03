@@ -4,8 +4,10 @@ import re
 
 
 def get_property(prop, project):
-    result = re.search(
-        r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop), open(project + '/__init__.py').read())
+    result = re.findall(r'^{}\s*=\s*[\'"]([^\'"]*)[\'"]$'.format(
+        prop), open(project + '/__init__.py').read(), re.MULTILINE)
+    # if more than one matches, result.group(1) is a list
+    assert type(result.group(1)) == str
     return result.group(1)
 
 
