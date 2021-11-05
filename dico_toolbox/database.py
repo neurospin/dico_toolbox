@@ -106,7 +106,7 @@ class FileDatabase:
 
         for t in range(len(templates)):
             if templates[t] in self.templates:
-                templates[t] = self.templates[templates[t]]
+                templates[t] = op.join(self.path, self.templates[templates[t]])
 
         for k in kwargs.keys():
             tag = start_tag + k + end_tag
