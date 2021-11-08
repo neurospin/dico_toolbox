@@ -3,7 +3,7 @@ import os.path as _op
 from . import convert as _convert
 import numpy as _np
 from soma import aims as _aims
-from _dev import _deprecation_alert_decorator
+from ._dev import _deprecation_alert_decorator
 
 
 BUCKETS_TYPES = ['aims_ss', 'aims_other', 'aims_bottom']
@@ -90,7 +90,6 @@ def stack_vertex_buckets(vertex, bck_types=BUCKETS_TYPES):
         stack = _np.vstack(vertex_bcks)
     except:
         stack = None
-        print(vertex_bcks)
 
     return stack
 
@@ -133,7 +132,7 @@ def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults
 
         Return
         ======
-        Return a Tuple (buckets, other_values). If return_keys is none, other_values is also none.
+        Return a Tuple (buckets, other_values). If return_keys is none, other_values is an empty dictionnary.
 
 
         Examples
@@ -157,7 +156,8 @@ def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults
     """
     if isinstance(graph, dict):
         # It is actually a vertex (because of previous implementation)
-        raise ValueError("stack_buckets() is now used for graph. Use stack_vertex_buckets instead()")
+        raise ValueError(
+            "stack_buckets() is now used for graph. Use stack_vertex_buckets instead()")
 
     graph = _check_graph(graph)
 
@@ -192,17 +192,21 @@ def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults
     graph_buckets = list()
     for vertex in vertices:
         bck = stack_vertex_buckets(vertex, bck_types=bck_types)
+        if bck is None:
+            continue
         bck_tr = tr_aims.transformPoints(bck) if tr_aims else bck
+        if len(bck_tr.shape) < 2:
+            bck_tr = [bck_tr]
         graph_buckets.append(bck_tr)
         for k in key_values:
             val = vertex.get(k)
             key_values[k].append(defaults[k] if val is None else val)
 
     # Return a flat vector of bucket points
-    if len(return_keys):
+    if return_keys is not None:
         return graph_buckets, key_values[return_keys[0]] if return_as_list else key_values
     else:
-        return graph_buckets, None
+        return graph_buckets, {}
 
 
 def stack_buckets(graph, key=None, needed_values=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):

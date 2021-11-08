@@ -1,10 +1,10 @@
 import os
 from soma import aims
+from dico_toolbox.test_data import load_data
 
 
 class paths:
-    base_test = os.path.dirname(os.path.realpath(__file__))
-    bucket_example = os.path.join(base_test, "test_data/bucket.bck")
+    bucket_example = os.path.join(load_data(), "bucket.bck")
 
 
 class _Data:
