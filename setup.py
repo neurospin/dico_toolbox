@@ -1,14 +1,20 @@
 import setuptools
 import os.path as op
 import re
+import logging as _logging
+
+_log = _logging.getLogger(__name__)
 
 
 def get_property(prop, project):
+    lookup_file = '/__init__.py'
     result = re.findall(r'^{}\s*=\s*[\'"]([^\'"]*)[\'"]$'.format(
-        prop), open(project + '/__init__.py').read(), re.MULTILINE)
-    # if more than one matches, result.group(1) is a list
-    assert type(result.group(1)) == str
-    return result.group(1)
+        prop), open(project + lookup_file).read(), re.MULTILINE)
+    # re.findall always returns list
+    if len(result) != 1:
+        _log.warn("Alert: More than one occurrence of {} found in {}}".format([prop, project + lookup_file]))
+    assert type(result[0]) == str
+    return result[0]
 
 
 try:
