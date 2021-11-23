@@ -231,6 +231,7 @@ def volume_to_bucket_numpy(volume):
 
 
 def volume_to_bucket_aims(volume):
+    """Convert a volume (aims or numpy) into an AIMS bucket"""
     points_cloud = np.argwhere(volume_to_ndarray(volume))
     return bucket_numpy_to_volume_aims(points_cloud)
 
