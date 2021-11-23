@@ -12,7 +12,7 @@ from scipy import ndimage as _ndimage
 import numpy as np
 import shutil as _shutil
 import logging
-from ._dev import _deprecation_warning
+from ._dev import _deprecation_alert_decorator
 log = logging.getLogger(__name__)
 
 
@@ -416,5 +416,5 @@ def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_
 
 
 # ALIASES FOR DEPRECATED FUNCTIONS
-@_deprecation_warning(use_instead=ndarray_to_volume_aims)
+@_deprecation_alert_decorator(use_instead=ndarray_to_volume_aims)
 def ndarray_to_aims_volume(*args, **kwargs): pass
