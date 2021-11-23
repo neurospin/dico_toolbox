@@ -346,7 +346,7 @@ def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
 
 def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
                    deciMaxError=1.0, deciMaxClearance=3.0,
-                   deciReductionRate=99, smoothRate=0.4,
+                   deciReductionRate=0, smoothRate=0.15,
                    smoothIt=30, translation=(0, 0, 0)):
     """Generate the mesh of the input bucket.
     WARNING: This function directly call some BrainVisa command line tools via os.system calls.
