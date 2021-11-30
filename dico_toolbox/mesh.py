@@ -13,19 +13,16 @@ def rescale_mesh(mesh, dxyz):
 
 def flip_mesh(mesh, axis=0):
     """Flip the mesh by inverting the specified axis.
-
+    
     This function modifies the input mesh.
-
+    
     Return None."""
-
-    # flip matrix
-    inv_mat = _np.eye(4)
-    inv_mat[0,0]=-1
-    inv_mat = _aims.AffineTransformation3d(inv_mat)
-
-    # apply flip trnasform
-    _aims.SurfaceManip.meshTransform(mesh,inv_mat)
-
+    flip_v = _np.ones(3)
+    flip_v[axis] = -1
+    for i in range(mesh.size()):
+        mesh.vertex(i).assign(
+            [_aims.Point3df(_np.array(x[:])*flip_v) for x in mesh.vertex(i)])
+        
 
 
 def transform_mesh(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
@@ -69,7 +66,6 @@ def shift_aims_mesh_along_axis(mesh, offset, scale=1, axis=1):
 
 def join_meshes(meshes):
     """Join meshes.
-
     All the meshes in the given iterable will be joined with the first one.
     The first element of meshes will be modified and returned.
     """

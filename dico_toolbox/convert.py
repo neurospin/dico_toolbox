@@ -78,7 +78,7 @@ def bucket_aims_to_ndarray(aims_bucket, voxel_size=(1, 1, 1)):
     return v
 
 
-def bucket_numpy_to_bucket_aims(ndarray):
+def bucket_numpy_to_bucketMap_aims(ndarray, voxel_size=(1,1,1)):
     """Transform a (N,3) ndarray into an aims BucketMap_VOID.
     The coordinates in the input array are casted to int.
     """
@@ -91,14 +91,21 @@ def bucket_numpy_to_bucket_aims(ndarray):
         ndarray = ndarray.astype(int)
 
     # create aims bucketmap instance
-    bck = _aims.BucketMap_VOID()
-    b0 = bck[0]
+    bck_map = _aims.BucketMap_VOID()
+    bck_map.setSizeXYZT(*voxel_size, 1)
+    b0 = bck_map[0]
 
     # fill the bucket
     for x, y, z in ndarray:
         b0[x, y, z] = 1
 
-    return bck
+    return bck_map
+
+
+@_deprecation_alert_decorator(bucket_numpy_to_bucketMap_aims)
+def bucket_numpy_to_bucket_aims(ndarray):
+    pass
+
 
 
 def volume_to_ndarray(volume):
@@ -230,8 +237,15 @@ def volume_to_bucket_numpy(volume):
     return np.argwhere(volume_to_ndarray(volume))
 
 
+def volume_to_bucketMap_aims(volume, voxel_size=(1,1,1)):
+    """Convert a volume (aims or numpy) into an AIMS bucket"""
+    points_cloud = np.argwhere(volume_to_ndarray(volume))
+    #add 4th dimension to the vozel size with a default size of 1
+    return bucket_numpy_to_bucketMap_aims(points_cloud, voxel_size=voxel_size)
+
+@_deprecation_alert_decorator(volume_to_bucketMap_aims)
 def volume_to_bucket_aims(volume):
-    return np.argwhere(volume_to_ndarray(volume))
+    pass
 
 
 def add_border(x, thickness, value):
