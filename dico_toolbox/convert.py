@@ -107,6 +107,7 @@ def bucket_numpy_to_bucket_aims(ndarray):
     pass
 
 
+
 def volume_to_ndarray(volume):
     """Transform aims volume in numpy array.
 
@@ -245,6 +246,7 @@ def volume_to_bucketMap_aims(volume, voxel_size=(1,1,1)):
 @_deprecation_alert_decorator(volume_to_bucketMap_aims)
 def volume_to_bucket_aims(volume):
     pass
+
 
 def add_border(x, thickness, value):
     """add borders to volume (numpy)"""

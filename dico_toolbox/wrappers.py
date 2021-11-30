@@ -1,6 +1,7 @@
 from soma import aims as _aims
 import numpy as _np
 
+
 class PyMesh:
     def __init__(self, aims_mesh=None):
         """A multi-frame mesh.
@@ -92,7 +93,19 @@ class PyMesh:
 
         return mesh
 
-    @ staticmethod
+    def to_dict(self):
+        return {
+            "vertices": self.vertices,
+            "polygons": self.polygons,
+            "normals": self.normals
+        }
+
+    def from_elements(self, vertices, polygons, normals):
+        self.vertices = vertices
+        self.polygons = polygons
+        self.normals = normals
+
+    @staticmethod
     def _mesh_prop_to_numpy(mesh_prop):
         """return a new numpy array converting AIMS mesh properties
         into numpy ndarrays (soma.aims.vector_POINT2DF)"""
@@ -125,43 +138,44 @@ class AimsObjAttribute:
     def __init__(self):
         pass
 
+
 class pyVertex:
     def __init__(self, aimsVertex):
         self.aims_obj = aimsVertex
         aa = AimsObjAttribute()
-        
+
         for k in self.aims_obj.keys():
             self.__dict__[k] = aa
-            
+
     def to_aims(self):
         return self.aims_obj
-            
+
     def __getattribute__(self, name):
         val = object.__getattribute__(self, name)
-        
+
         if isinstance(val, AimsObjAttribute):
             val = self.aims_obj.get(name)
-            
+
         return val
-        
+
     def __repr__(self):
         return f"{self.name}"
-    
-    
+
+
 class pyGraph:
     def __init__(self, aimsGraph):
-        assert( isinstance(aimsGraph, _aims.Graph))
+        assert(isinstance(aimsGraph, _aims.Graph))
         self.aims_obj = aimsGraph
-        for k,v in self.aims_obj.items():
-            self.__dict__[k]=v
+        for k, v in self.aims_obj.items():
+            self.__dict__[k] = v
         self.vertices = [pyVertex(v) for v in aimsGraph.vertices().list()]
         self.aimsvertices = aimsGraph.vertices().list()
-        
+
     def to_aims(self):
         return self.aims_obj
-    
+
     def __getattr__(self, name):
         return eval(f"self.aims_obj.{name}")
-    
+
     def __repr__(self):
         return f"pyGraph of {len(self.vertices)} vertices"

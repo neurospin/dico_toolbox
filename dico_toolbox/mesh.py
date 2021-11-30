@@ -2,6 +2,7 @@ from soma import aims as _aims
 import numpy as _np
 from . import transform as _transform
 
+
 def rescale_mesh(mesh, dxyz):
     """Rescale a mesh by multiplying its vertices with the factors in dxyx.
     The rescaling is done in place."""
@@ -21,6 +22,7 @@ def flip_mesh(mesh, axis=0):
     for i in range(mesh.size()):
         mesh.vertex(i).assign(
             [_aims.Point3df(_np.array(x[:])*flip_v) for x in mesh.vertex(i)])
+        
 
 
 def transform_mesh(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
@@ -64,12 +66,11 @@ def shift_aims_mesh_along_axis(mesh, offset, scale=1, axis=1):
 
 def join_meshes(meshes):
     """Join meshes.
-    
     All the meshes in the given iterable will be joined with the first one.
     The first element of meshes will be modified and returned.
     """
     assert len(meshes) > 0, "Empty mesh list"
     for mesh in meshes[1:]:
         _aims.SurfaceManip.meshMerge(meshes[0], mesh)
-        
+
     return meshes[0]
