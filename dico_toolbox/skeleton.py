@@ -1,0 +1,25 @@
+
+
+# cfr. : [brainvisa]/src/morphologist/morphologist-private/bug_fix/vip/src/libvip/topology.h
+# reference : 1995 - JF Mangin et Al. From 3D magneti resonance images to structural ... Figure.12
+topological_values = {
+    'interior' : 0,                 # [?] below gray matter
+    'volume' : 10,                  # [A] volume point
+    'isolated' : 20,                # [B] isolated point
+    'exterior' : 11,                # [?] above gray matter
+    'border' : 30,                  # [C] boder of a sulcus-element surface
+    'curve' : 40,                   # [D] 1D curve
+    'curve_curve-junction' : 50,    # [E] intersection of two curves
+    'surface' : 60,                 # [F] surface of a sulcus-element
+    'curve_surface-junction':70,    # [G] intersection of a curve and a surface
+    'surfaces-junction' : 80,       # [H] intersection of several surfaces
+    'surfaces_curve-junction': 90   # [I] intersection of several surfaces and a curve
+}
+
+class topovalues:
+    bottom = topological_values['border']
+    surface = topological_values['surface']
+    interior = topological_values['interior']
+    exterior = topological_values['exterior']
+
+topological_values_by_value = dict((v, k) for k, v in topological_values.items())
