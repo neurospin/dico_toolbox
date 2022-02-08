@@ -1,13 +1,12 @@
 import setuptools
 import os.path as op
-import re
+import os
 import logging as _logging
 
 _log = _logging.getLogger(__name__)
 
-
 try:
-    from aims import soma
+    from soma import aims
 except:
     ImportError(
         "pyAims could not be imported. It makes no sense to install this package outside a brainvisa environment.")
@@ -27,12 +26,12 @@ setuptools.setup(
     version=release_info['__version__'],
     description=release_info['DESCRIPTION'],
     author=release_info['AUTHOR'],
-    author_email=release_info['AUTHOR_EMAIL']
+    author_email=release_info['AUTHOR_EMAIL'],
     long_description=long_description,
     long_description_content_type="text/markdown",
     url=release_info['URL'],
     packages=['dico_toolbox'],
     install_requires=release_info["REQUIRES"],
-    classifiers=release_info["CLASSIFIERS"]
+    classifiers=release_info["CLASSIFIERS"],
     extras_require=release_info['EXTRA_REQUIRES']
 )
