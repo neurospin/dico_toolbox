@@ -35,11 +35,16 @@ LICENSE = "CeCILL-B"
 AUTHOR = 'Marco Pascucci, Bastien Cagna'
 AUTHOR_EMAIL = 'marpas.paris@gmail.com'
 PLATFORMS = "OS Independent"
-PROVIDES = ["dico_toolbox"]
-REQUIRES = ['numpy']
+PROVIDES = ["dico_toolbox", "dico_toolbox.cli"]
+REQUIRES = ['numpy', 'tqdm']
 EXTRA_REQUIRES = {
     "doc": ["sphinx>=" + SPHINX_MIN_VERSION],
     'dev': ['pytest']
+}
+ENTRYPOINTS = {
+    'console_scripts': [
+        'dtb_volume_to_point_cloud=dico_toolbox.cli.volume_to_point_cloud:main',
+    ],
 }
 
 brainvisa_build_model = 'pure_python'
