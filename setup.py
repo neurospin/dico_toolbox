@@ -33,5 +33,7 @@ setuptools.setup(
     packages=['dico_toolbox'],
     install_requires=release_info["REQUIRES"],
     classifiers=release_info["CLASSIFIERS"],
-    extras_require=release_info['EXTRA_REQUIRES']
+    extras_require=release_info['EXTRA_REQUIRES'],
+    entry_points=release_info['ENTRYPOINTS'],
+
 )
