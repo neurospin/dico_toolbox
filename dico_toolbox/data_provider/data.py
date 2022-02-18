@@ -1,32 +1,11 @@
 from glob import glob
 import os
 import re
-import logging
 from difflib import get_close_matches
-import functools
-
-log = logging.getLogger(__name__)
-
-try:
-    from soma import aims as _aims
-    HAS_AIMS = True
-except ImportError:
-    HAS_AIMS = False
-
-
-def _with_brainvisa(fun):
-    @functools.wraps(fun)
-    def wrapper(*args, **kwargs):
-        if not HAS_AIMS:
-            raise RuntimeError(
-                "This function is only available in a brainvisa environment")
-        return fun(*args, **kwargs)
-    return wrapper
-
+from .._tools import _with_brainvisa
 
 class paths:
     dico = "/neurospin/dico"
-
 
 class pclean:
     """file provider for the plcean folder"""

@@ -2,6 +2,7 @@ import functools
 import logging
 
 logger = logging.getLogger("dico_toolbox_dev")
+
 def _deprecation_alert_decorator(use_instead):
     def real_decorator(function):
         @functools.wraps(function)
