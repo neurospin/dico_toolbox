@@ -13,9 +13,10 @@ class SulciRegionOverlap(JsonData):
     - Some regions incorporate more than one sulcus
 
   Properties:
-    - regions (dict of str:dict) contains the regions definition.
+    - regions (dict of str:list) contains the regions definition.
       The keys of regions items correspond to the name of the regions.
-      The values of regions lists of sulcii labels, as defined in the set of labels of the automatic-detection
+      The values of regions lists items are sulcii labels, as defined in
+        the set of labels of the automatic-detection
   
   
   [ORIGINAL DESCRIPTION BY DENIS RIVIERE]
