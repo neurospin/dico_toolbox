@@ -3,6 +3,7 @@ import os.path as _op
 from . import convert as _convert
 import numpy as _np
 from soma import aims as _aims
+# from joblib.parallel import Parallel, delayed, cpu_count
 from ._dev import _deprecation_alert_decorator
 
 
@@ -24,8 +25,34 @@ def _check_graph(graph):
     return graph
 
 
+def check_graph(graphs) -> _aims.Graph or List[_aims.Graph]:
+    """ Check that graph is actually a graph and load it if it is a path. 
+
+        Parameters
+        ----------
+        graphs: str or list of str or Aims FGraph or list of Aims FGraph
+            One or several graph object or file path to check.
+
+        Return
+        ------
+        A single graph if graphs is not a list or tuple. A list of graphs otherwise.
+    """
+    if isinstance(graphs, (tuple, list)):
+        return list(_check_graph(graph) for graph in graphs)
+        # FIXME: _aims.Graph are not pickable, need to use pyGraph
+        # njobs: int (opt.)
+        #     Number of parallel jobs to use to check all the graphs.
+        #     If < 1 it use all the CPUs minus njobs.
+        #     Default is 1.
+        # njobs = cpu_count() - njobs if njobs < 1 else min(njobs, cpu_count())
+        # return Parallel(n_jobs=max(njobs, 1))(delayed(_check_graph)(g) for g in graphs)
+    else:
+        return check_graph(graphs)
+
+
 def get_vertices_by_key(graph, key, needed_values):
     """Return all vertices with given key in the graph"""
+    graph = _check_graph(graph)
     if not isinstance(needed_values, (list, tuple)):
         needed = [needed_values]
     out = list(filter(lambda v: v.get(key) in needed_values,
@@ -36,6 +63,7 @@ def get_vertices_by_key(graph, key, needed_values):
 @_deprecation_alert_decorator(use_instead=get_vertices_by_key)
 def get_vertices_by_name(name, graph):
     """Return all vertices with given name in the graph"""
+    graph = _check_graph(graph)
     return get_vertices_by_key(graph, 'name', name)
 
 
@@ -58,6 +86,7 @@ def get_property_from_vertices(graph, prop, filt=None):
 
     If the property does not exist or is None, it is not returned.
     """
+    graph = _check_graph(graph)
     values_gen = _get_property_from_list_of_dict(
         _check_graph(graph).vertices().list(), prop, filt)
     return list(values_gen)
@@ -69,6 +98,7 @@ def get_property_from_edges(graph, prop, filt=None):
 
     If the property does not exist or is None, it is not returned.
     """
+    graph = _check_graph(graph)
     values_gen = _get_property_from_list_of_dict(
         _check_graph(graph).edges().list(), prop, filt)
     return list(values_gen)
@@ -211,6 +241,7 @@ def list_buckets(graph, key=None, needed_values=None, return_keys=None, defaults
 
 def stack_buckets(graph, key=None, needed_values=None, return_keys=None, defaults=None, transform=None, bck_types=BUCKETS_TYPES):
     """ Stack bucket listed by list_buckets() """
+    graph = _check_graph(graph)
     graph_buckets, key_values = list_buckets(
         graph, key, needed_values, return_keys, defaults, transform, bck_types)
     if len(return_keys):
