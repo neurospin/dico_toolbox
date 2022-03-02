@@ -7,8 +7,8 @@ __pycache__/
 *.py[cod]
 scripts/
 
-*.ipynb
 venv
 
 .pytest_cache/
 build/
+examples_local/
