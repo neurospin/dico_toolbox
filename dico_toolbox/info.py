@@ -2,7 +2,7 @@
 
 version_major = 0
 version_minor = 1
-version_micro = 0
+version_micro = 1
 version_extra = ''
 
 # Format expected by setup.py and doc/source/conf.py: string of form "X.Y.Z"
@@ -35,12 +35,16 @@ LICENSE = "CeCILL-B"
 AUTHOR = 'Marco Pascucci, Bastien Cagna'
 AUTHOR_EMAIL = 'marpas.paris@gmail.com'
 PLATFORMS = "OS Independent"
-PROVIDES = ["dico_toolbox"]
-REQUIRES = ['numpy']
+PROVIDES = ["dico_toolbox", "dico_toolbox.cli", "dico_toolbox.anatomist"]
+REQUIRES = ['numpy', 'tqdm']
 EXTRA_REQUIRES = {
     "doc": ["sphinx>=" + SPHINX_MIN_VERSION],
     'dev': ['pytest']
 }
+ENTRYPOINTS = {
+    'console_scripts': [
+        'dtb_volume_to_point_cloud=dico_toolbox.cli.volume_to_point_cloud:main',
+    ],
+}
 
 brainvisa_build_model = 'pure_python'
-
