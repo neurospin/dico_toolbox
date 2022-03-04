@@ -1,4 +1,5 @@
 import argparse
+from multiprocessing.sharedctypes import Value
 import os
 from glob import glob
 from tqdm import tqdm
@@ -39,20 +40,22 @@ def main(*args, **kwargs):
     parser = argparse.ArgumentParser(
         description="Convert specified AIMS volume files into point clouds and store them in one compressed numpy file.")
     parser.add_argument(
-        "input_path", help="The path to the volume to convert (wildcards are admitted m e.g. *.nii)", nargs='*', type=str)
+        "input_path", help="The path of the volume to convert (wildcards are admitted m e.g. *.nii)", nargs='*', type=str)
     parser.add_argument("-o", "--output_path",
                         help="The path of the output file containing the bucket", type=str)
     args = parser.parse_args()
 
     out_path = args.output_path
-    if out_path is None:
-        out_path = "point_clouds.npz"
-    base_out_dir = os.path.dirname(out_path)
 
-    # check output path validity
-    if not os.path.isdir(base_out_dir):
-        log.critical(f'"{base_out_dir}" is not a valid directory')
-        return 1
+    # create output directories if they do not exist
+    base_out_dir = os.path.dirname(out_path)
+    if base_out_dir:
+        os.makedirs(base_out_dir, exist_ok=True)
+
+    # check that the wildcard have been expanded
+    for path in args.input_path:
+        if not os.path.exists(path):
+            raise ValueError(f"ERROR: check the input path: {path}")
 
     fun = volume_to_point_cloud
 
