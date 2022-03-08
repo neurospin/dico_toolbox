@@ -2,11 +2,13 @@ from builtins import ValueError, isinstance
 from argparse import ArgumentError
 from multiprocessing.sharedctypes import Value
 import os
+import tempfile
 import numpy
 import logging
 from ..convert import bucket_numpy_to_bucketMap_aims, ndarray_to_aims_volume
 from ..wrappers import PyMesh
 import anatomist.api as anatomist
+from PIL import Image
 
 
 log = logging.getLogger(__name__)
@@ -195,6 +197,19 @@ class Anatomist():
         for name in object_names:
             r, g, b = numpy.random.randint(100, size=3)/100
             self.set_objects_color(name, r=r, g=g, b=b)
+
+    def snapshot(self, window_name='quick'):
+        """Take a snapshot of the speficified window."""
+        with tempfile.NamedTemporaryFile(suffix='_temp.jpg', prefix='pyanatomist_') as f:
+            window = self.windows.get(window_name, None)
+            if window is None:
+                raise ArgumentError(f"Window name {window_name} is not valid")
+            window.snapshot(f.name)
+            img = numpy.asarray(Image.open(f.name))
+            return img
+
+    def clear_quick_window(self):
+        self.new_window_3D('quick')
 
     def __call__(self, *objects):
         self.draw3D(*objects)
