@@ -1,7 +1,11 @@
+from builtins import ValueError, isinstance
 from argparse import ArgumentError
 from multiprocessing.sharedctypes import Value
 import os
+import numpy
 import logging
+from ..convert import bucket_numpy_to_bucketMap_aims, ndarray_to_aims_volume
+from ..wrappers import PyMesh
 import anatomist.api as anatomist
 
 
@@ -59,6 +63,19 @@ class Anatomist():
     def close(self):
         self._instance.close()
 
+    def _delete_object(self, anatomist_object):
+        try:
+            anatomist_object.releaseAppRef()
+            anatomist_object.releaseRef()
+        except Exception:
+            pass
+
+    def delete_objects(self, *object_names):
+        for name in object_names:
+            self.objects.pop(name)
+            o = self.anatomist_objects.pop(name)
+            self._delete_object(o)
+
     def get_anatomist_instance(self):
         return self._instance
 
@@ -87,6 +104,29 @@ class Anatomist():
             objects = {n: obj for n, obj in enumerate(objects)}
 
         for name, obj in objects.items():
+
+            if isinstance(obj, numpy.ndarray):
+                # Object is a NUMPY arrays
+                if len(obj.shape) == 2 and obj.shape[1] == 3:
+                    # object is a point cloud
+                    obj = bucket_numpy_to_bucketMap_aims(obj)
+                elif len(obj.shape) == 3:
+                    # object is a volume
+                    obj = ndarray_to_aims_volume(obj)
+                else:
+                    raise ValueError(
+                        f"object {name} is an unconvertible numpy array.")
+
+            if isinstance(obj, PyMesh):
+                # obj is a PyMesh
+                obj = obj.to_aims_mesh()
+
+            # remove existing objects from anatomist
+            existing_obj = self.anatomist_objects.get(name, None)
+            if existing_obj is not None:
+                # self._instance.deleteObjects([existing_obj])
+                self._delete_object(existing_obj)
+
             m = self._instance.toAObject(obj)
             m.setName(str(name))
             m.setChanged()
@@ -115,13 +155,19 @@ class Anatomist():
         """
         self._add_objects(objects, window_names=[window_name])
 
-    def set_object_color(self, object_name, r=0, g=0, b=0, alpha=1):
+    def set_objects_color(self, *object_names, r=0, g=0, b=0, alpha=1):
         """Set the color of an existing object"""
-        obj = self.anatomist_objects.get(object_name, None)
-        if obj is None:
-            raise ArgumentError(f"The object {object_name} does not exist")
         m = self._instance.Material(diffuse=[r, g, b, alpha])
-        obj.setMaterial(m)
+
+        if isinstance(object_names[0], dict):
+            object_names = object_names[0].keys()
+
+        for name in object_names:
+            obj = self.anatomist_objects.get(name, None)
+            if obj is None:
+                raise ArgumentError(f"The object {name} does not exist")
+
+            obj.setMaterial(m)
 
     def add_objects_to_block(self, *objects, block_name="DefaultBlock"):
         window_names = self.blocks[block_name].windows
@@ -130,8 +176,11 @@ class Anatomist():
     def draw3D(self, *objects):
         """Quickly draw the objects in a new 3D window"""
         win_name = "quick"
-        self.new_window_3D(name=win_name)
-        self.add_objects_to_window(*objects, window_name=win_name)
+        try:
+            self.add_objects_to_window(*objects, window_name=win_name)
+        except Exception:
+            self.new_window_3D(win_name)
+            self.add_objects_to_window(*objects, window_name=win_name)
 
     def draw_block(self, *objects):
         """Draw the objects in a new window block"""
@@ -139,5 +188,16 @@ class Anatomist():
         self.new_window_block(name=block_name)
         self.add_objects_to_block(*objects, block_name=block_name)
 
+    def color_random(self, *object_names):
+        """Set random color to the specified objects, ore to all objects if None is specified."""
+        if len(object_names) == 0:
+            object_names = self.anatomist_objects.keys()
+        for name in object_names:
+            r, g, b = numpy.random.randint(100, size=3)/100
+            self.set_objects_color(name, r=r, g=g, b=b)
+
     def __call__(self, *objects):
         self.draw3D(*objects)
+
+    def __str__(self):
+        return "Anatomist wrapper."
