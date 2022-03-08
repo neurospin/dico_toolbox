@@ -39,7 +39,7 @@ def mesh_of_average(average_result, in_embedding=False, embedding_scale=1, **mes
     mesh = volume_to_mesh(average_result.vol, **meshing_parameters)
     # translate the mesh into the original bucket coordinate system
     mesh = shift_aims_mesh(mesh, average_result.offset)
-    if in_embedding:
+    if in_embedding and len(average_result.coord_in_embedding) <= 2:
         v = np.zeros(3)
         for i, x in enumerate(average_result.coord_in_embedding):
             v[i] = x
@@ -91,7 +91,9 @@ def mesh_one_point_cloud(data):
 
     # shift mesh
     mesh_shifted = None
-    if shift is not None:
+    mesh_shifted_dict = None
+    if shift is not None and len(shift) <= 3:
+        # The user gave an offset and the embedding dimension is <=3
         assert len(shift) <= 3, "embedding dimension must be <= 3"
         v = np.zeros(3)
         for i, x in enumerate(shift):
@@ -113,7 +115,7 @@ def _parse_pool_result(res):
     if res['shifted_mesh'] is not None:
         shifted_mesh = PyMesh()
         shifted_mesh.from_elements(**res['shifted_mesh'])
-        shifted_mesh = shifted_mesh.to_aims_mesh()
+        shifted_mesh = shifted_mesh.to_aims_mesh() if shifted_mesh is not None else None
 
     return name, mesh, shifted_mesh
 
@@ -141,7 +143,7 @@ def mesh_of_point_clouds(pcs, pre_transformation=None, flip=False, post_transfor
             name=name,
             pc=pc,
             talairach=pre_transformation,  # {dxy, rot, tra}
-            flip=False,
+            flip=flip,
             align=post_transformation,  # {rot, tra},
             shift=shift,  # [x,y,z]
             meshing_parameters=meshing_parameters
