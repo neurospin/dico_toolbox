@@ -115,6 +115,14 @@ class Anatomist():
         """
         self._add_objects(objects, window_names=[window_name])
 
+    def set_object_color(self, object_name, r=0, g=0, b=0, alpha=1):
+        """Set the color of an existing object"""
+        obj = self.anatomist_objects.get(object_name, None)
+        if obj is None:
+            raise ArgumentError(f"The object {object_name} does not exist")
+        m = self._instance.Material(diffuse=[r, g, b, alpha])
+        obj.setMaterial(m)
+
     def add_objects_to_block(self, *objects, block_name="DefaultBlock"):
         window_names = self.blocks[block_name].windows
         self._add_objects(objects, window_names=window_names)
