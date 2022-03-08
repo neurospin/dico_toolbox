@@ -1,3 +1,5 @@
+from argparse import ArgumentError
+from multiprocessing.sharedctypes import Value
 import os
 import logging
 import anatomist.api as anatomist
@@ -17,7 +19,7 @@ class Anatomist():
     _instance = None
     windows = {}
     objects = {}
-    _anatomist_objects = {}
+    anatomist_objects = {}
     blocks = {}
 
     def __init__(self):
@@ -29,11 +31,11 @@ class Anatomist():
         self.windows[name] = w
         return w
 
-    def new_window_block(self, name="DefaultBlock", columns=2, windows=("Axial", "Sagittal", "Coronal", "3D")):
+    def new_window_block(self, name="DefaultBlock", columns=2, windows=("Axial", "Sagittal", "Coronal", "3D"), size=(500, 500), pos=(0, 0)):
         """Create a new window block"""
         block = self._instance.createWindowsBlock(2)  # 2 columns
         wd = {wt: self._new_window(
-            f"{name}_{wt}", window_type=wt, block=block) for wt in windows}
+            f"{name}_{wt}", window_type=wt, block=block, geometry=pos + size) for wt in windows}
         self.windows.update(wd)
         block.windows = wd
         self.blocks[name] = block
@@ -60,12 +62,22 @@ class Anatomist():
     def get_anatomist_instance(self):
         return self._instance
 
-    def get_anatomist_objects(self):
-        """Get the objects as Aims objects"""
-        return self._anatomist_objects
-
     def reload_objects(self):
         self._instance.reloadObjects(self._instance.getObjects())
+
+    def rename_object(self, old_name, new_name):
+        """Rename an object"""
+        if old_name not in self.objects:
+            raise ArgumentError(f"{old_name} is not an existing object")
+
+        self.objects[new_name] = self.objects.pop(old_name)
+        self.anatomist_objects[new_name] = self.anatomist_objects.pop(
+            old_name)
+
+        m = self.anatomist_objects[new_name]
+        m.setName(new_name)
+        m.setChanged()
+        m.notifyObservers()
 
     def _add_objects(self, objects, window_names=["Default"]):
         if len(objects) == 1 and type(objects[0]) == dict:
@@ -76,11 +88,13 @@ class Anatomist():
 
         for name, obj in objects.items():
             m = self._instance.toAObject(obj)
-            # m.name = name
+            m.setName(str(name))
+            m.setChanged()
+            m.notifyObservers()
             m.addInWindows([self.windows[window_name]
                            for window_name in window_names])
             self.objects[name] = obj
-            self._anatomist_objects[name] = m
+            self.anatomist_objects[name] = m
 
     def clear_window(self, window_name="Default"):
         a = self.get_anatomist_instance()
@@ -94,6 +108,8 @@ class Anatomist():
     def add_objects_to_window(self, *objects, window_name="Default"):
         """Add one or more (comma separated) AIMS objects to a window.
 
+        If a single dictionnary is given argument, the objects are labeled according to the dictionnary keys
+
         Args:
             window_name (str, optional): the name of the window. Defaults to "Default".
         """
@@ -102,3 +118,18 @@ class Anatomist():
     def add_objects_to_block(self, *objects, block_name="DefaultBlock"):
         window_names = self.blocks[block_name].windows
         self._add_objects(objects, window_names=window_names)
+
+    def draw3D(self, *objects):
+        """Quickly draw the objects in a new 3D window"""
+        win_name = "quick"
+        self.new_window_3D(name=win_name)
+        self.add_objects_to_window(*objects, window_name=win_name)
+
+    def draw_block(self, *objects):
+        """Draw the objects in a new window block"""
+        block_name = "quick"
+        self.new_window_block(name=block_name)
+        self.add_objects_to_block(*objects, block_name=block_name)
+
+    def __call__(self, *objects):
+        self.draw3D(*objects)
