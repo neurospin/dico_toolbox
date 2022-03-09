@@ -123,6 +123,35 @@ plt.imshow(an.snapshot());
 
 
 ```python
+# get the instance of the anatomist object
+anatomist_instance = an.get_anatomist_instance()
+print(anatomist_instance.getVersion())
+```
+
+
+    ---------------------------------------------------------------------------
+
+    AttributeError                            Traceback (most recent call last)
+
+    <ipython-input-22-f15e93848707> in <module>()
+          1 # get the instance of the anatomist object
+          2 anatomist_instance = an.get_anatomist_instance()
+    ----> 3 print(anatomist_instance.getVersion())
+    
+
+    /casa/host/build/python/anatomist/direct/api.py in getVersion(self)
+       1021             resetProcExec = True
+       1022         command = self.execute("GetInfo", version=1)
+    -> 1023         result = command.result()
+       1024         if resetProcExec:
+       1025             # set back recursive execution to its previous state
+
+
+    AttributeError: 'NoneType' object has no attribute 'result'
+
+
+
+```python
 # remove one object
 an.delete_objects('first')
 ```
@@ -134,7 +163,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_16_0.png)
+![png](docs/examples/markdown/readme/Readme_files/Readme_17_0.png)
     
 
 
@@ -146,4 +175,9 @@ an.delete_all_objects()
 
 ```python
 an.close()
+```
+
+
+```python
+
 ```
