@@ -87,7 +87,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_11_0.png)
+![png](Readme_files/Readme_11_0.png)
     
 
 
@@ -117,7 +117,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_14_0.png)
+![png](Readme_files/Readme_14_0.png)
     
 
 
@@ -134,7 +134,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_16_0.png)
+![png](Readme_files/Readme_16_0.png)
     
 
 

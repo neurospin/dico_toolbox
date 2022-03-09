@@ -1,3 +1,4 @@
+# [treesource] conversion of pyAims and numpy objects
 # from scipy.ndimage.measurements import minimum
 from . import bucket as _bucket
 from . import mesh as _mesh

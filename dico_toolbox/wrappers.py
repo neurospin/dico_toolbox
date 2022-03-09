@@ -1,3 +1,4 @@
+# [treesource] wrappers for pyAims objects e.g. PyMesh
 from soma import aims as _aims
 import numpy as _np
 

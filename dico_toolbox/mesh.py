@@ -1,3 +1,4 @@
+# [treesource] PyAims Mesh manipulation
 from soma import aims as _aims
 import numpy as _np
 from . import transform as _transform

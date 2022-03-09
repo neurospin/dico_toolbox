@@ -1,8 +1,9 @@
 from builtins import ValueError, isinstance
-from argparse import ArgumentError
 from multiprocessing.sharedctypes import Value
 import os
+from random import random
 import tempfile
+from types import SimpleNamespace
 import numpy
 import logging
 from ..convert import bucket_numpy_to_bucketMap_aims, ndarray_to_aims_volume
@@ -20,44 +21,67 @@ message_lines = ["NOTES for jupyter users:"
                  "- To hide anatomist logs, use the '%%capture' magic command at the beginning of the cell"]
 
 
+def random_rgb_dict():
+    """return a dictionnary with keys 'r', 'g' and 'b' and random float values in [0,1]"""
+    v = numpy.random.randint(100, size=3)/100
+    return dict(zip('rgb', v))
+
+
 class Anatomist():
-    info_displayed = False
-    _instance = None
-    windows = {}
-    objects = {}
-    anatomist_objects = {}
-    blocks = {}
+    # info_displayed = False
 
     def __init__(self):
         log.warning("\n".join(message_lines))
         self._instance = anatomist.Anatomist()
+        self.windows = {}
+        self.objects = {}
+        self.anatomist_objects = {}
+        self.blocks = {}
 
-    def _new_window(self, name, window_type, **kwargs):
+        self.config = SimpleNamespace(
+            new_window_view_quaternion=[0.55, -0.15, -0.15, 0.8],
+            new_window_position=(0, 0),
+            new_window_size=(500, 500)
+        )
+
+    def new_window(self, name, window_type, size=None, pos=None, camera_kwargs={}, **kwargs):
+        if size is None:
+            size = self.config.new_window_size
+        if pos is None:
+            pos = self.config.new_window_position
+
+        kwargs['geometry'] = pos+size
+
         w = self._instance.createWindow(window_type, **kwargs)
         self.windows[name] = w
+
+        # set camera position
+        view_quaternion = camera_kwargs.get(
+            "view_quaternion", self.config.new_window_view_quaternion)
+        w.camera(view_quaternion=view_quaternion)
         return w
 
-    def new_window_block(self, name="DefaultBlock", columns=2, windows=("Axial", "Sagittal", "Coronal", "3D"), size=(500, 500), pos=(0, 0)):
+    def new_window_block(self, name="DefaultBlock", columns=2, windows=("Axial", "Sagittal", "Coronal", "3D"), size=None, pos=None):
         """Create a new window block"""
         block = self._instance.createWindowsBlock(2)  # 2 columns
-        wd = {wt: self._new_window(
-            f"{name}_{wt}", window_type=wt, block=block, geometry=pos + size) for wt in windows}
+        wd = {wt: self.new_window(
+            f"{name}_{wt}", window_type=wt, block=block, pos=pos, size=size) for wt in windows}
         self.windows.update(wd)
         block.windows = wd
         self.blocks[name] = block
 
-    def new_window_3D(self, name="Default", size=(500, 500), pos=(0, 0)):
+    def new_window_3D(self, name="Default", size=None, pos=None):
         """Create a new window"""
-        self._new_window(name, window_type="3D", geometry=pos + size)
+        self.new_window(name, window_type="3D", size=size, pos=pos)
 
-    def new_window_Sagittal(self, name="Default", size=(500, 500), pos=(0, 0)):
-        self._new_window(name, window_type="Sagittal", geometry=pos + size)
+    def new_window_Sagittal(self, name="Default", size=None, pos=None):
+        self.new_window(name, window_type="Sagittal", size=size, pos=pos)
 
-    def new_window_Axial(self, name="Default", size=(500, 500), pos=(0, 0)):
-        self._new_window(name, window_type="Axial", geometry=pos + size)
+    def new_window_Axial(self, name="Default", size=None, pos=None):
+        self.new_window(name, window_type="Axial", size=size, pos=pos)
 
-    def new_window_Coronal(self, name="Default", size=(500, 500), pos=(0, 0)):
-        self._new_window(name, window_type="Coronal", geometry=pos + size)
+    def new_window_Coronal(self, name="Default", size=None, pos=None):
+        self.new_window(name, window_type="Coronal", size=size, pos=pos)
 
     def get_window_names(self):
         return list(self.windows.keys())
@@ -66,17 +90,33 @@ class Anatomist():
         self._instance.close()
 
     def _delete_object(self, anatomist_object):
+        """Remove all references to an anatomist object"""
         try:
             anatomist_object.releaseAppRef()
             anatomist_object.releaseRef()
         except Exception:
             pass
 
+    def _get_keys_of_first_argument_if_dict(self, args):
+        objects_names = args
+        if len(args) == 1 and type(args[0]) == dict:
+            objects_names = list(args[0].keys())
+        return objects_names
+
     def delete_objects(self, *object_names):
+        """Delete the specified objects by name.
+        The argument can be a dictionnary, in which case the keys will be used as names."""
+        object_names = self._get_keys_of_first_argument_if_dict(object_names)
         for name in object_names:
             self.objects.pop(name)
             o = self.anatomist_objects.pop(name)
             self._delete_object(o)
+
+    def delete_all_objects(self):
+        """Delete all objects"""
+        self.delete_objects(self.anatomist_objects)
+        self.anatomist_objects = {}
+        self.objects = {}
 
     def get_anatomist_instance(self):
         return self._instance
@@ -87,7 +127,7 @@ class Anatomist():
     def rename_object(self, old_name, new_name):
         """Rename an object"""
         if old_name not in self.objects:
-            raise ArgumentError(f"{old_name} is not an existing object")
+            raise ValueError(f"{old_name} is not an existing object")
 
         self.objects[new_name] = self.objects.pop(old_name)
         self.anatomist_objects[new_name] = self.anatomist_objects.pop(
@@ -98,8 +138,9 @@ class Anatomist():
         m.setChanged()
         m.notifyObservers()
 
-    def _add_objects(self, objects, window_names=["Default"]):
+    def _add_objects(self, *objects, window_names=["Default"]):
         if len(objects) == 1 and type(objects[0]) == dict:
+            # argument is a dictionnary
             objects = objects[0]
         elif type(objects) in [list, tuple]:
             # list to dict
@@ -126,7 +167,6 @@ class Anatomist():
             # remove existing objects from anatomist
             existing_obj = self.anatomist_objects.get(name, None)
             if existing_obj is not None:
-                # self._instance.deleteObjects([existing_obj])
                 self._delete_object(existing_obj)
 
             m = self._instance.toAObject(obj)
@@ -155,19 +195,20 @@ class Anatomist():
         Args:
             window_name (str, optional): the name of the window. Defaults to "Default".
         """
-        self._add_objects(objects, window_names=[window_name])
+        self._add_objects(*objects, window_names=[window_name])
 
     def set_objects_color(self, *object_names, r=0, g=0, b=0, alpha=1):
-        """Set the color of an existing object"""
+        """Set the color of an existing object.
+        The argument can be a dictionnary, in which case the keys will be used as names.
+        """
         m = self._instance.Material(diffuse=[r, g, b, alpha])
 
-        if isinstance(object_names[0], dict):
-            object_names = object_names[0].keys()
+        object_names = self._get_keys_of_first_argument_if_dict(object_names)
 
         for name in object_names:
             obj = self.anatomist_objects.get(name, None)
             if obj is None:
-                raise ArgumentError(f"The object {name} does not exist")
+                raise ValueError(f"The object {name} does not exist")
 
             obj.setMaterial(m)
 
@@ -176,7 +217,8 @@ class Anatomist():
         self._add_objects(objects, window_names=window_names)
 
     def draw3D(self, *objects):
-        """Quickly draw the objects in a new 3D window"""
+        """Quickly draw the objects in a new 3D window.
+        """
         win_name = "quick"
         try:
             self.add_objects_to_window(*objects, window_name=win_name)
@@ -191,27 +233,30 @@ class Anatomist():
         self.add_objects_to_block(*objects, block_name=block_name)
 
     def color_random(self, *object_names):
-        """Set random color to the specified objects, ore to all objects if None is specified."""
+        """Set random color to the specified objects, or to all objects if None is specified."""
         if len(object_names) == 0:
             object_names = self.anatomist_objects.keys()
         for name in object_names:
-            r, g, b = numpy.random.randint(100, size=3)/100
-            self.set_objects_color(name, r=r, g=g, b=b)
+            colors = random_rgb_dict()
+            self.set_objects_color(name, **colors)
 
     def snapshot(self, window_name='quick'):
         """Take a snapshot of the speficified window."""
         with tempfile.NamedTemporaryFile(suffix='_temp.jpg', prefix='pyanatomist_') as f:
             window = self.windows.get(window_name, None)
             if window is None:
-                raise ArgumentError(f"Window name {window_name} is not valid")
+                raise ValueError(f"Window name {window_name} is not valid")
             window.snapshot(f.name)
             img = numpy.asarray(Image.open(f.name))
             return img
 
-    def clear_quick_window(self):
-        self.new_window_3D('quick')
+    def get_quick_window_reference(self):
+        return self.windows.get('quick', None)
 
-    def __call__(self, *objects):
+    def clear_quick_window(self):
+        self.clear_window('quick')
+
+    def __call__(self, *objects, random_color=False):
         self.draw3D(*objects)
 
     def __str__(self):
