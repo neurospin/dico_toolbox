@@ -28,11 +28,16 @@ def random_rgb_dict():
 
 
 class Anatomist():
-    # info_displayed = False
+    _anatomist_instance = None
 
     def __init__(self):
         log.warning("\n".join(message_lines))
-        self._instance = anatomist.Anatomist()
+
+        # lazy creation of an anatomist instance
+        if Anatomist._anatomist_instance is None:
+            Anatomist._anatomist_instance = anatomist.Anatomist()
+
+        self._instance = Anatomist._anatomist_instance
         self.windows = {}
         self.objects = {}
         self.anatomist_objects = {}
