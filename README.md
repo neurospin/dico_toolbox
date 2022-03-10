@@ -7,12 +7,6 @@ It mainly contains documented python3 recipies to manipulate and convert pyAIMS 
 
 
 ```python
-%load_ext autoreload
-%autoreload 2
-```
-
-
-```python
 # A description of the package tree
 import treesource as ts
 tree = ts.generate_tree('..')
@@ -71,12 +65,10 @@ rpc2 = (10*np.random.randn(400,3)).astype(int)
 
 
 ```python
+# draw objects (with automatic colors) 
 an(rpc1, rpc2)
-```
 
-
-```python
-an.color_random()
+# an.color_random() can be used to re-assign random colors to all the objects
 ```
 
 
@@ -87,7 +79,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_11_0.png)
+![png](docs/examples/markdown/readme/Readme_files/Readme_10_0.png)
     
 
 
@@ -117,7 +109,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_14_0.png)
+![png](docs/examples/markdown/readme/Readme_files/Readme_13_0.png)
     
 
 
@@ -144,7 +136,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_17_0.png)
+![png](docs/examples/markdown/readme/Readme_files/Readme_16_0.png)
     
 
 
