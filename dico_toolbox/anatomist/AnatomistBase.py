@@ -33,7 +33,7 @@ class Anatomist():
                            [2.14, 0.39, 0.40],[1.48, 1.03, 1.89],[1.4, 0.86, 0.75],
                            [2.27, 1.19, 1.94],[1.27, 1.27, 1.27],[1.88, 1.89, 0.34],
                            [0.23, 1.9, 2.07]]
-    _default_colors_cycle = cycle(default_colors_list)
+    
 
     def __init__(self):
         log.warning("\n".join(message_lines))
@@ -47,12 +47,18 @@ class Anatomist():
         self.objects = {}
         self.anatomist_objects = {}
         self.blocks = {}
+        
+        self._default_colors_cycle = cycle([])
+        self.reset_color_cycle()
 
         self.config = SimpleNamespace(
             new_window_view_quaternion=[0.55, -0.15, -0.15, 0.8],
             new_window_position=(0, 0),
             new_window_size=(500, 500)
         )
+        
+    def reset_color_cycle(self):
+        self._default_colors_cycle = cycle(Anatomist.default_colors_list)
 
     def new_window(self, name, window_type, size=None, pos=None, camera_kwargs={}, **kwargs):
         if size is None:
@@ -237,7 +243,7 @@ class Anatomist():
         
     def _get_next_default_colors(self, length=1):
         """return a list of rdb dictionnary containing the next color from the default list)"""
-        return [dict(zip('rgb', next(Anatomist._default_colors_cycle))) for i in range(length)]
+        return [dict(zip('rgb', next(self._default_colors_cycle))) for i in range(length)]
 
     def draw3D(self, *objects, auto_color=False):
         """Quickly draw the objects in a new 3D window.
