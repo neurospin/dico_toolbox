@@ -7,6 +7,12 @@ It mainly contains documented python3 recipies to manipulate and convert pyAIMS 
 
 
 ```python
+%load_ext autoreload
+%autoreload 2
+```
+
+
+```python
 # A description of the package tree
 import treesource as ts
 tree = ts.generate_tree('..')
@@ -115,6 +121,19 @@ plt.imshow(an.snapshot());
 
 
 ```python
+# It is possible to set colors for all the objects in a dictionnary
+an.set_objects_color(d, r=1, g=0,b=0)
+plt.imshow(an.snapshot());
+```
+
+
+    
+![png](docs/examples/markdown/readme/Readme_files/Readme_14_0.png)
+    
+
+
+
+```python
 # get the instance of the anatomist object
 anatomist_instance = an.get_anatomist_instance()
 print(anatomist_instance.getVersion())
@@ -126,7 +145,7 @@ print(anatomist_instance.getVersion())
 
 ```python
 # remove one object
-an.delete_objects('first')
+an.delete_objects('second')
 ```
 
 
@@ -136,7 +155,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_16_0.png)
+![png](docs/examples/markdown/readme/Readme_files/Readme_17_0.png)
     
 
 
@@ -148,4 +167,9 @@ an.delete_all_objects()
 
 ```python
 an.close()
+```
+
+
+```python
+
 ```
