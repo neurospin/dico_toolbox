@@ -124,8 +124,8 @@ plt.imshow(an.snapshot());
 
 ```python
 # colors can also be specified as string or list
-an.set_objects_color('second', color='lightgreen')
-an.set_objects_color('second', color='orange')
+an.set_objects_color('first', color='cyan')
+an.set_objects_color('second', color='magenta')
 plt.imshow(an.snapshot());
 ```
 
@@ -184,11 +184,3 @@ an.delete_all_objects()
 ```python
 an.close()
 ```
-
-
-<!-- REMOVED CODE CELL
-```python
-#README_HIDE_CELL
-test=1
-```
--->
