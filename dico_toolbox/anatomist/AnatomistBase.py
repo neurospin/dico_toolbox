@@ -1,7 +1,9 @@
 from builtins import ValueError, isinstance
+from cgi import print_directory
 from multiprocessing.sharedctypes import Value
 import os
 from random import random
+from re import A
 import tempfile
 from types import SimpleNamespace
 import numpy
@@ -11,6 +13,7 @@ from ..wrappers import PyMesh
 import anatomist.api as anatomist
 from PIL import Image
 from itertools import cycle
+from . import colors
 
 log = logging.getLogger(__name__)
 
@@ -29,11 +32,7 @@ def random_rgb_dict():
 
 class Anatomist():
     _anatomist_instance = None
-    default_colors_list = [[0.31, 1.19, 1.80],[2.55, 1.27, 0.14],[0.44, 1.6, 0.44],
-                           [2.14, 0.39, 0.40],[1.48, 1.03, 1.89],[1.4, 0.86, 0.75],
-                           [2.27, 1.19, 1.94],[1.27, 1.27, 1.27],[1.88, 1.89, 0.34],
-                           [0.23, 1.9, 2.07]]
-    
+    default_colors_list = colors.color_values.default_color_list
 
     def __init__(self):
         log.warning("\n".join(message_lines))
@@ -47,7 +46,7 @@ class Anatomist():
         self.objects = {}
         self.anatomist_objects = {}
         self.blocks = {}
-        
+
         self._default_colors_cycle = cycle([])
         self.reset_color_cycle()
 
@@ -56,7 +55,7 @@ class Anatomist():
             new_window_position=(0, 0),
             new_window_size=(500, 500)
         )
-        
+
     def reset_color_cycle(self):
         self._default_colors_cycle = cycle(Anatomist.default_colors_list)
 
@@ -154,7 +153,17 @@ class Anatomist():
         m.setChanged()
         m.notifyObservers()
 
-    def _add_objects(self, *objects, window_names=["Default"], auto_color=False):
+    def _add_objects(self, *objects, color=None, window_names=["Default"], auto_color=False):
+        """Add objects to one or more windows
+
+        Args:
+            color (str or iterable, optional): specify the object color. Defaults to None.
+            window_names (list of str, optional): name of the windows where the object will be displayed. Defaults to ["Default"].
+            auto_color (bool, optional): if True, set an automatic color for the object. Defaults to False.
+
+        Raises:
+            ValueError: _description_
+        """
         if len(objects) == 1 and type(objects[0]) == dict:
             # argument is a dictionnary
             objects = objects[0]
@@ -191,12 +200,14 @@ class Anatomist():
             m.notifyObservers()
             m.addInWindows([self.windows[window_name]
                            for window_name in window_names])
-            
+
             self.objects[name] = obj
             self.anatomist_objects[name] = m
-            
+
             if auto_color:
                 self.set_next_default_color(name)
+            elif color is not None:
+                self.set_objects_color(name, color)
 
     def clear_window(self, window_name="Default"):
         a = self.get_anatomist_instance()
@@ -207,7 +218,7 @@ class Anatomist():
         for w in self.blocks[block_name].windows:
             a.removeObjects(a.getObjects(), w)
 
-    def add_objects_to_window(self, *objects, window_name="Default", auto_color=False):
+    def add_objects_to_window(self, *objects, window_name="Default", color=None, auto_color=False):
         """Add one or more (comma separated) AIMS objects to a window.
 
         If a single dictionnary is given argument, the objects are labeled according to the dictionnary keys
@@ -215,13 +226,43 @@ class Anatomist():
         Args:
             window_name (str, optional): the name of the window. Defaults to "Default".
         """
-        self._add_objects(*objects, window_names=[window_name], auto_color=auto_color)
+        self._add_objects(
+            *objects, window_names=[window_name], auto_color=auto_color)
 
-    def set_objects_color(self, *object_names, r=0, g=0, b=0, alpha=1):
+    def set_objects_color(self, *object_names, color=None, r=None, g=None, b=None, a=1):
         """Set the color of an existing object.
-        The argument can be a dictionnary, in which case the keys will be used as names.
+
+        Args:
+            color (str, list or dict, optional): The color of the object. Defaults to None.
+            It can be:
+            - an interable of floats in [0,1] specifing red, green, blue and alpha values
+            - a color name in the style of matplotlib (e.g. 'lightgreen')
+            - a dictionnary with keys r,g,b,a
+
+            r,g,b,a float values in [0,1] specifying red, green, blue and alpha (opacity).
+            These values are applied after the `color` argument, changing the specified value.
+
         """
-        m = self._instance.Material(diffuse=[r, g, b, alpha])
+
+        if color is not None:
+            d = colors.parse_color_argument(color)
+            if r is not None:
+                d['r'] = r
+            if g is not None:
+                d['g'] = g
+            if b is not None:
+                d['b'] = b
+            if a is not None:
+                d['a'] = a
+
+            r, g, b, a = d['r'], d['g'], d['b'], d['a']
+
+        else:
+            r = 0 if r is None else r
+            g = 0 if g is None else g
+            b = 0 if b is None else b
+
+        m = self._instance.Material(diffuse=[r, g, b, a])
 
         object_names = self._get_keys_of_first_argument_if_dict(object_names)
 
@@ -231,30 +272,39 @@ class Anatomist():
                 raise ValueError(f"The object {name} does not exist")
 
             obj.setMaterial(m)
-            
+
     def set_next_default_color(self, obj_name):
         """Set the next default color to the object"""
         rgb = self._get_next_default_colors()[0]
-        self.set_objects_color(obj_name,**rgb)
+        self.set_objects_color(obj_name, **rgb)
 
     def add_objects_to_block(self, *objects, block_name="DefaultBlock"):
         window_names = self.blocks[block_name].windows
         self._add_objects(objects, window_names=window_names)
-        
+
     def _get_next_default_colors(self, length=1):
         """return a list of rdb dictionnary containing the next color from the default list)"""
         return [dict(zip('rgb', next(self._default_colors_cycle))) for i in range(length)]
 
-    def draw3D(self, *objects, auto_color=False):
-        """Quickly draw the objects in a new 3D window.
-        color_dict is an r,g,b,a dictionnary of values in [0,1].
+    def draw3D(self, *objects, color=None, auto_color=False):
+        """Draw the objects in a new 3D window in the "quick" window.
+
+        Args:
+            color (str, list or dict, optional): The color of the object. Defaults to None.
+            It can be:
+            - an interable of floats in [0,1] specifing red, green, blue and alpha values
+            - a color name in the style of matplotlib (e.g. 'lightgreen')
+            - a dictionnary with keys r,g,b,a
+            auto_color (bool, optional): Assign an automatic color to the objects. Defaults to False.
         """
         win_name = "quick"
         try:
-            self.add_objects_to_window(*objects, window_name=win_name, auto_color=auto_color)
+            self.add_objects_to_window(
+                *objects, window_name=win_name, color=color, auto_color=auto_color)
         except Exception:
             self.new_window_3D(win_name)
-            self.add_objects_to_window(*objects, window_name=win_name, auto_color=auto_color)
+            self.add_objects_to_window(
+                *objects, window_name=win_name, color=color, auto_color=auto_color)
 
     def draw_block(self, *objects):
         """Draw the objects in a new window block"""
@@ -286,8 +336,28 @@ class Anatomist():
     def clear_quick_window(self):
         self.clear_window('quick')
 
-    def __call__(self, *objects, auto_color=True):
-        self.draw3D(*objects, auto_color=auto_color)
+    def clear(self):
+        """Clear the "quick" window."""
+        self.clear_quick_window()
+
+    def __call__(self, *objects, c=None, auto_color=True):
+        """Quickly draw the objects in a new 3D window.
+
+        Args:
+            c (str, list or dict, optional): The color of the object. Defaults to None.
+            It can be:
+            - an interable of floats in [0,1] specifing red, green, blue and alpha values
+            - a color name in the style of matplotlib (e.g. 'lightgreen')
+            - a dictionnary with keys r,g,b,a
+
+            auto_color (bool, optional): Assign an automatic color to the objects. Defaults to False.
+            If a color is defined with the 'c' argument, auto_color is set to False
+        """
+
+        if c is not None:
+            auto_color = False
+
+        self.draw3D(*objects, color=c, auto_color=auto_color)
 
     def __str__(self):
         return "Anatomist wrapper."
