@@ -6,10 +6,12 @@ dico_toolbox is a set of shared tools developed for the FolDico project.
 It mainly contains documented python3 recipies to manipulate and convert pyAIMS entities (volumes, buckets, graphs, meshes) into numpy arrays.
 
 
+<!-- REMOVED CODE CELL
 ```python
 %load_ext autoreload
 %autoreload 2
 ```
+-->
 
 
 ```python
@@ -85,7 +87,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_10_0.png)
+![png](./docs/examples/markdown/readme/Readme_files//Readme_10_0.png)
     
 
 
@@ -115,20 +117,34 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_13_0.png)
+![png](./docs/examples/markdown/readme/Readme_files//Readme_13_0.png)
+    
+
+
+
+```python
+# colors can also be specified as string or list
+an.set_objects_color('second', color='lightgreen')
+an.set_objects_color('second', color='orange')
+plt.imshow(an.snapshot());
+```
+
+
+    
+![png](./docs/examples/markdown/readme/Readme_files//Readme_14_0.png)
     
 
 
 
 ```python
 # It is possible to set colors for all the objects in a dictionnary
-an.set_objects_color(d, r=1, g=0,b=0)
+an.set_objects_color(d, color='red')
 plt.imshow(an.snapshot());
 ```
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_14_0.png)
+![png](./docs/examples/markdown/readme/Readme_files//Readme_15_0.png)
     
 
 
@@ -155,7 +171,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](docs/examples/markdown/readme/Readme_files/Readme_17_0.png)
+![png](./docs/examples/markdown/readme/Readme_files//Readme_18_0.png)
     
 
 
@@ -170,6 +186,9 @@ an.close()
 ```
 
 
+<!-- REMOVED CODE CELL
 ```python
-
+#README_HIDE_CELL
+test=1
 ```
+-->
