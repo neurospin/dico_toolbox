@@ -14,12 +14,15 @@ It mainly contains documented python3 recipies to manipulate and convert pyAIMS 
 -->
 
 
+<!-- REMOVED CODE CELL
 ```python
+#README_HIDE_CELL
 # A description of the package tree
 import treesource as ts
 tree = ts.generate_tree('..')
 print(ts.render.as_text(tree))
 ```
+-->
 
     .
     └── dico_toolbox/
@@ -138,7 +141,7 @@ plt.imshow(an.snapshot());
 ```python
 # colors can also be specified as string or list
 an.set_objects_color('first', color='cyan')
-an.set_objects_color('second', color='m') # some colors have short names (m = magenta)
+an.set_objects_color('second', color='m') # common colors have short names (m = magenta)
 plt.imshow(an.snapshot());
 ```
 
@@ -197,3 +200,6 @@ an.delete_all_objects()
 ```python
 an.close()
 ```
+
+
+<!-- REMOVED EMPTY CODE CELL -->
