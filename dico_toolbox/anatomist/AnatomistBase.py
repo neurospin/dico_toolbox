@@ -229,8 +229,17 @@ class Anatomist():
         self._add_objects(
             *objects, window_names=[window_name], auto_color=auto_color)
 
-    def set_objects_color(self, *object_names, color=None, r=None, g=None, b=None, a=1):
-        """Set the color of an existing object.
+    def _set_object_color(self, anatomist_object, r=None, g=None, b=None, a=None):
+        """update the color of an object by changing one or more of R,G,B,A."""
+        rgba_obj = anatomist_object.getInfo()['material']['diffuse']
+        for i, x in enumerate([r, g, b, a]):
+            if x is not None:
+                rgba_obj[i] = x
+        m = self._instance.Material(diffuse=rgba_obj)
+        anatomist_object.setMaterial(m)
+
+    def set_objects_color(self, *object_names, color=None, r=None, g=None, b=None, a=None):
+        """Set the color of existing objects.
 
         Args:
             color (str, list or dict, optional): The color of the object. Defaults to None.
@@ -244,34 +253,27 @@ class Anatomist():
 
         """
 
-        if color is not None:
-            d = colors.parse_color_argument(color)
-            if r is not None:
-                d['r'] = r
-            if g is not None:
-                d['g'] = g
-            if b is not None:
-                d['b'] = b
-            if a is not None:
-                d['a'] = a
-
-            r, g, b, a = d['r'], d['g'], d['b'], d['a']
-
-        else:
-            r = 0 if r is None else r
-            g = 0 if g is None else g
-            b = 0 if b is None else b
-
-        m = self._instance.Material(diffuse=[r, g, b, a])
+        color = {} if color is None else color
 
         object_names = self._get_keys_of_first_argument_if_dict(object_names)
 
         for name in object_names:
             obj = self.anatomist_objects.get(name, None)
+
             if obj is None:
                 raise ValueError(f"The object {name} does not exist")
 
-            obj.setMaterial(m)
+            d = colors.parse_color_argument(color)
+            r = d.get('r', r)
+            g = d.get('g', g)
+            b = d.get('b', b)
+            a = d.get('a', a)
+
+            self._set_object_color(obj, r, g, b, a)
+
+    def set_objects_opacity(self, *object_names, opacity=1):
+        """Set the opacity of objects with a value in [0 transparent, 1 opaque]"""
+        self.set_objects_color(*object_names, a=opacity)
 
     def set_next_default_color(self, obj_name):
         """Set the next default color to the object"""
@@ -334,6 +336,7 @@ class Anatomist():
         return self.windows.get('quick', None)
 
     def clear_quick_window(self):
+        self.reset_color_cycle()
         self.clear_window('quick')
 
     def clear(self):

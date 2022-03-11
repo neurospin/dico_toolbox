@@ -39,6 +39,8 @@ def parse_color_argument(color):
     elif isinstance(color, str):
         # argument is a string
         try:
+            if color in color_values.color_short:
+                color = color_values.color_short[color]
             rgb = color_values.colors[color]
             d = dict(zip('rgb', rgb))
         except KeyError:

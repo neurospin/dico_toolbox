@@ -74,6 +74,7 @@ rpc2 = (10*np.random.randn(400,3)).astype(int)
 
 ```python
 # draw objects (with automatic colors) 
+an.clear()
 an(rpc1, rpc2)
 
 # an.color_random() can be used to re-assign random colors to all the objects
@@ -106,8 +107,8 @@ an(d)
 
 ```python
 # set colors
-an.set_objects_color('first', b=1)
-an.set_objects_color('second', g=1)
+an.set_objects_color('first', r=1, g=1, b=0)
+an.set_objects_color('second', r=0, g=0, b=1)
 ```
 
 
@@ -123,15 +124,27 @@ plt.imshow(an.snapshot());
 
 
 ```python
-# colors can also be specified as string or list
-an.set_objects_color('first', color='cyan')
-an.set_objects_color('second', color='magenta')
+an.set_objects_opacity("second",opacity=0.5)
 plt.imshow(an.snapshot());
 ```
 
 
     
 ![png](./docs/examples/markdown/readme/Readme_files//Readme_14_0.png)
+    
+
+
+
+```python
+# colors can also be specified as string or list
+an.set_objects_color('first', color='cyan')
+an.set_objects_color('second', color='m') # some colors have short names (m = magenta)
+plt.imshow(an.snapshot());
+```
+
+
+    
+![png](./docs/examples/markdown/readme/Readme_files//Readme_15_0.png)
     
 
 
@@ -144,7 +157,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](./docs/examples/markdown/readme/Readme_files//Readme_15_0.png)
+![png](./docs/examples/markdown/readme/Readme_files//Readme_16_0.png)
     
 
 
@@ -171,7 +184,7 @@ plt.imshow(an.snapshot());
 
 
     
-![png](./docs/examples/markdown/readme/Readme_files//Readme_18_0.png)
+![png](./docs/examples/markdown/readme/Readme_files//Readme_19_0.png)
     
 
 
