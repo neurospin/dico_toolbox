@@ -145,18 +145,19 @@ def main(*args, **kwargs):
     if args.no_code_cells:
         print("Remove all code cells.")
         markdown = comment_all_code_cells(markdown)
-    elif len(keywords) > 0:
-        print("Remove cells by keyword.", keywords)
-        markdown = comment_code_cells_by_keyword(
-            markdown, *keywords)
+    else:
+        if len(keywords) > 0:
+            print("Remove cells by keyword.", keywords)
+            markdown = comment_code_cells_by_keyword(
+                markdown, *keywords)
 
-    if not args.keep_empty_cells:
-        print("Keep empty conde cells.")
-        markdown = comment_empty_code_cells(markdown)
+        if not args.keep_empty_cells:
+            print("Keep empty conde cells.")
+            markdown = comment_empty_code_cells(markdown)
 
-    if not args.keep_autoreload_magic:
-        markdown = comment_code_cells_by_keyword(
-            markdown, '%autoreload', '#HIDE_IN_MARKDOWN')
+        if not args.keep_auto_hidden:
+            markdown = comment_code_cells_by_keyword(
+                markdown, '%autoreload', '#HIDE_IN_MARKDOWN')
 
     # IMAGE PATHS
     print("Move images and update paths.")
