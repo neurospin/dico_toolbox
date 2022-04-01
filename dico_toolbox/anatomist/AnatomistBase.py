@@ -8,7 +8,7 @@ import tempfile
 from types import SimpleNamespace
 import numpy
 import logging
-from ..convert import bucket_numpy_to_bucketMap_aims, ndarray_to_aims_volume
+from ..convert import bucket_numpy_to_bucketMap_aims, ndarray_to_volume_aims
 from ..wrappers import PyMesh
 import anatomist.api as anatomist
 from PIL import Image
@@ -180,7 +180,7 @@ class Anatomist():
                     obj = bucket_numpy_to_bucketMap_aims(obj)
                 elif len(obj.shape) == 3:
                     # object is a volume
-                    obj = ndarray_to_aims_volume(obj)
+                    obj = ndarray_to_volume_aims(obj)
                 else:
                     raise ValueError(
                         f"object {name} is an unconvertible numpy array.")
