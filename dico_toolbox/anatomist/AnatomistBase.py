@@ -211,7 +211,9 @@ class Anatomist():
 
     def clear_window(self, window_name="Default"):
         a = self.get_anatomist_instance()
-        a.removeObjects(a.getObjects(), self.windows[window_name])
+        w = self.windows.get(window_name, None)
+        if w is not None:
+            a.removeObjects(a.getObjects(), w)
 
     def clear_block(self, block_name="DefaultBlock"):
         a = self.get_anatomist_instance()
