@@ -96,9 +96,9 @@ def main(*args, **kwargs):
     parser.add_argument(
         "input_path", help="The path of the Juptyter notebook to be converted", type=str)
     parser.add_argument("-o", "--output_path", default=None,
-                        help="The path of the output markdown files. Default ./NOTEBOOK.md", type=str)
+                        help="The path of the output markdown files, specified as '[output_path]/filename.md'. Default ./NOTEBOOK.md", type=str)
     parser.add_argument("-i", "--output_image_folder", default=None,
-                        help="The path to the folder that will contain the images linked in the markdown. Default [output_path]/NOTEBOOK_files/", type=str)
+                        help="The path to the folder that will contain the images linked in the markdown. This path will be added to [output_path]. Default [output_path]/NOTEBOOK_files/", type=str)
     parser.add_argument("-c", "--no_code_cells", help="Remove all code cells.",
                         default=False, action="store_true")
     parser.add_argument("-e", "--keep_empty_cells", help="Keep empty code cells.",
@@ -129,6 +129,10 @@ def main(*args, **kwargs):
 
     output_folder, output_notebook_name = os.path.split(
         os.path.splitext(output_path)[0])
+
+    if output_folder == '':
+        output_folder = '.'
+
     os.makedirs(output_folder, exist_ok=True)  # make the conversion folder
 
     if img_dir is None:
@@ -166,7 +170,7 @@ def main(*args, **kwargs):
     # change the paths in the markdown file
     old_img_dir = f"{notebook_name}_files"
     markdown = correct_img_paths(
-        markdown, old_img_dir, img_dir)
+        markdown, old_img_dir, img_dir.replace(output_folder, '.'))
     # copy the images
     for path in glob.glob(os.path.join(temp_img_dir, "*")):
         shutil.copy(path, img_dir)
