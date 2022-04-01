@@ -172,7 +172,6 @@ class Anatomist():
             objects = {n: obj for n, obj in enumerate(objects)}
 
         for name, obj in objects.items():
-
             if isinstance(obj, numpy.ndarray):
                 # Object is a NUMPY arrays
                 if len(obj.shape) == 2 and obj.shape[1] == 3:
@@ -207,7 +206,7 @@ class Anatomist():
             if auto_color:
                 self.set_next_default_color(name)
             elif color is not None:
-                self.set_objects_color(name, color)
+                self.set_objects_color(name, color=color)
 
     def clear_window(self, window_name="Default"):
         a = self.get_anatomist_instance()
@@ -229,7 +228,7 @@ class Anatomist():
             window_name (str, optional): the name of the window. Defaults to "Default".
         """
         self._add_objects(
-            *objects, window_names=[window_name], auto_color=auto_color)
+            *objects, window_names=[window_name], color=color, auto_color=auto_color)
 
     def _set_object_color(self, anatomist_object, r=None, g=None, b=None, a=None):
         """update the color of an object by changing one or more of R,G,B,A."""
