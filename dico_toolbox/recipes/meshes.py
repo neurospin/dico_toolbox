@@ -89,20 +89,7 @@ def mesh_one_point_cloud(data):
     # convert to dictionnary
     mesh_dict = PyMesh(mesh).to_dict()
 
-    # shift mesh
-    mesh_shifted = None
-    mesh_shifted_dict = None
-    if shift is not None and len(shift) <= 3:
-        # The user gave an offset and the embedding dimension is <=3
-        assert len(shift) <= 3, "embedding dimension must be <= 3"
-        v = np.zeros(3)
-        for i, x in enumerate(shift):
-            v[i] = x
-        mesh_shifted = transform_mesh(
-            mesh, rot_matrix=np.eye(3), transl_vec=v)
-        mesh_shifted_dict = PyMesh(mesh_shifted).to_dict()
-
-    return {"name": name, "mesh": mesh_dict, "shifted_mesh": mesh_shifted_dict}
+    return {"name": name, "mesh": mesh_dict}
 
 
 def _parse_pool_result(res):
@@ -110,30 +97,33 @@ def _parse_pool_result(res):
     mesh = PyMesh()
     mesh.from_elements(**res['mesh'])
     mesh = mesh.to_aims_mesh()
-    # rebuild
-    shifted_mesh = None
-    if res['shifted_mesh'] is not None:
-        shifted_mesh = PyMesh()
-        shifted_mesh.from_elements(**res['shifted_mesh'])
-        shifted_mesh = shifted_mesh.to_aims_mesh() if shifted_mesh is not None else None
 
-    return name, mesh, shifted_mesh
+    return name, mesh
 
 
 def _parse_pool_results(results):
     """Rebuild the multiprocessing results"""
     meshes = dict()
-    shifted_meshes = dict()
     for res in tqdm(results, desc="rebuilding results"):
-        # rebuild
-        name, mesh, shifted_mesh = _parse_pool_result(res)
+        name, mesh = _parse_pool_result(res)
         meshes[name] = mesh
-        shifted_meshes[name] = shifted_mesh
-
-    return meshes, shifted_meshes
+    return meshes
 
 
 def mesh_of_point_clouds(pcs, pre_transformation=None, flip=False, post_transformation=None, embedding=None, embedding_scale=1, **meshing_parameters):
+    """Build the mesh of the pointclouds.
+
+    Args:
+        pcs (dict): the point clouds
+        pre_transformation (collection of dict, optional): This transformation is applied before flip. keys = {dxy, rot, tra}. Defaults to None.
+        flip (bool, optional): flip the data. Defaults to False.
+        post_transformation (collection of dict, optional): This transformation is applied after flip. keys = {rot, tra}. Defaults to None.
+        embedding (DataFrame, optional): The embedding. Defaults to None.
+        embedding_scale (int, optional): Scale for the final offset of the mesh. Defaults to 1.
+
+    Returns:
+        _type_: _description_
+    """
     data = []
     for name, pc in pcs.items():
         shift = None

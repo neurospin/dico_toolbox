@@ -30,7 +30,7 @@ def flip_mesh(mesh, axis=0):
             [_aims.Point3df(_np.array(x[:])*flip_v) for x in mesh.vertex(i)])
 
 
-def transform_mesh_inplace(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
+def transform_mesh_inplace(mesh, rot_matrix=_np.eye(3), transl_vec=_np.zeros(3)):
     """Applay an affine tranformation to the mesh.
     The tranformation happens in-place, the input mesh is motified.
 
@@ -40,7 +40,7 @@ def transform_mesh_inplace(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
     _aims.SurfaceManip.meshTransform(mesh, M)
 
 
-def transform_mesh(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
+def transform_mesh(mesh, rot_matrix=_np.eye(3), transl_vec=_np.zeros(3)):
     """Applay an affine tranformation to the mesh.
     The tranformation happens in-place, the input mesh is motified.
 
@@ -53,7 +53,9 @@ def transform_mesh(mesh, rot_matrix=_np.eye(3), transl_vec=_np.ones(3)):
 
 
 def shift_aims_mesh(mesh, offset, scale=1):
-    """Translate each mesh of a specified distance along an axis.
+    """Translate each mesh with a specified offset.
+
+    The offset must be an iterable of 3 elements (a 3D vector).
 
     The scale parameter multiplies the distance values before applying the translation.
     Returns a shifted mesh
@@ -76,9 +78,11 @@ def shift_aims_mesh(mesh, offset, scale=1):
 
 
 def shift_aims_mesh_along_axis(mesh, offset, scale=1, axis=1):
+    """Translate a mesh."""
     shift_v = _np.zeros(3)
     shift_v[axis] = offset
-    return shift_aims_mesh(mesh, shift_v, scale=scale)
+    # return shift_aims_mesh(mesh, shift_v, scale=scale)
+    return transform_mesh(mesh, transl_vec=shift_v*scale)
 
 
 def join_meshes(meshes):

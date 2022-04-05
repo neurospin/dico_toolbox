@@ -8,7 +8,7 @@ import tempfile
 from types import SimpleNamespace
 import numpy
 import logging
-from ..convert import bucket_numpy_to_bucketMap_aims, ndarray_to_aims_volume
+from ..convert import bucket_numpy_to_bucketMap_aims, ndarray_to_volume_aims
 from ..wrappers import PyMesh
 import anatomist.api as anatomist
 from PIL import Image
@@ -172,7 +172,6 @@ class Anatomist():
             objects = {n: obj for n, obj in enumerate(objects)}
 
         for name, obj in objects.items():
-
             if isinstance(obj, numpy.ndarray):
                 # Object is a NUMPY arrays
                 if len(obj.shape) == 2 and obj.shape[1] == 3:
@@ -180,7 +179,7 @@ class Anatomist():
                     obj = bucket_numpy_to_bucketMap_aims(obj)
                 elif len(obj.shape) == 3:
                     # object is a volume
-                    obj = ndarray_to_aims_volume(obj)
+                    obj = ndarray_to_volume_aims(obj)
                 else:
                     raise ValueError(
                         f"object {name} is an unconvertible numpy array.")
@@ -207,11 +206,13 @@ class Anatomist():
             if auto_color:
                 self.set_next_default_color(name)
             elif color is not None:
-                self.set_objects_color(name, color)
+                self.set_objects_color(name, color=color)
 
     def clear_window(self, window_name="Default"):
         a = self.get_anatomist_instance()
-        a.removeObjects(a.getObjects(), self.windows[window_name])
+        w = self.windows.get(window_name, None)
+        if w is not None:
+            a.removeObjects(a.getObjects(), w)
 
     def clear_block(self, block_name="DefaultBlock"):
         a = self.get_anatomist_instance()
@@ -227,7 +228,7 @@ class Anatomist():
             window_name (str, optional): the name of the window. Defaults to "Default".
         """
         self._add_objects(
-            *objects, window_names=[window_name], auto_color=auto_color)
+            *objects, window_names=[window_name], color=color, auto_color=auto_color)
 
     def _set_object_color(self, anatomist_object, r=None, g=None, b=None, a=None):
         """update the color of an object by changing one or more of R,G,B,A."""

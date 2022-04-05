@@ -44,6 +44,7 @@ EXTRA_REQUIRES = {
 ENTRYPOINTS = {
     'console_scripts': [
         'dtb_volume_to_point_cloud=dico_toolbox.cli.volume_to_point_cloud:main',
+        'nb2md=dico_toolbox.cli.notebook2markdown:main'
     ],
 }
 
