@@ -283,7 +283,7 @@ class Anatomist():
 
     def add_objects_to_block(self, *objects, block_name="DefaultBlock"):
         window_names = self.blocks[block_name].windows
-        self._add_objects(objects, window_names=window_names)
+        self._add_objects(*objects, window_names=window_names)
 
     def _get_next_default_colors(self, length=1):
         """return a list of rdb dictionnary containing the next color from the default list)"""
