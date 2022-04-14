@@ -79,8 +79,9 @@ class Anatomist():
     def new_window_block(self, name="DefaultBlock", columns=2, windows=("Axial", "Sagittal", "Coronal", "3D"), size=None, pos=None):
         """Create a new window block"""
         block = self._instance.createWindowsBlock(2)  # 2 columns
-        wd = {wt: self.new_window(
-            f"{name}_{wt}", window_type=wt, block=block, pos=pos, size=size) for wt in windows}
+        window_names = [wt+str(cnt) for cnt, wt in enumerate(windows)]
+        wd = {wn: self.new_window(
+            f"{name}_{wn}", window_type=wt, block=block, pos=pos, size=size) for wn, wt in zip(window_names, windows)}
         self.windows.update(wd)
         block.windows = wd
         self.blocks[name] = block
@@ -216,8 +217,9 @@ class Anatomist():
 
     def clear_block(self, block_name="DefaultBlock"):
         a = self.get_anatomist_instance()
-        for w in self.blocks[block_name].windows:
-            a.removeObjects(a.getObjects(), w)
+        for w in self.windows:
+            if w is not None:
+                a.removeObjects(a.getObjects(), w)
 
     def add_objects_to_window(self, *objects, window_name="Default", color=None, auto_color=False):
         """Add one or more (comma separated) AIMS objects to a window.
