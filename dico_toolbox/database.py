@@ -5,10 +5,17 @@ from typing import Union
 from collections.abc import Sequence
 from glob import glob
 from warnings import warn
+from ._dev import _deprecation_alert_decorator
+from enum import Enum
+
+class Hemisphere(Enum):
+    BOTH = '*'
+    LEFT = 'L'
+    RIGHT = 'R'
 
 
 def extend_templates(templates, default_value=None, start_tag="[", end_tag="]", **kwargs):
-    """ """
+    """ List existing file and directories that match the template """
     if not isinstance(templates, (list, tuple)):
         templates = [templates]
 
@@ -39,7 +46,8 @@ def extend_templates(templates, default_value=None, start_tag="[", end_tag="]", 
                 for val in kwargs[k]:
                     new_templates.append(template.replace(
                         start_tag + k + end_tag, val))
-        templates = new_templates
+        if len(new_templates):
+            templates = new_templates
 
     return templates
 
@@ -99,6 +107,18 @@ class FileDatabase:
                 results.append(fpath)
         return results
 
+    def get_one_from_template(self, template, **kwargs):
+        try:
+            return self.get_from_template(template, **kwargs)[0]
+        except IndexError:
+            if template in self.templates:
+                temp = self.templates[template]
+                raise IndexError("No {}({}) was found in {} with parameters: {}".format(
+                                 template, temp, self.path, kwargs))
+            else:
+                raise IndexError("No {} was found in {} with parameters: {}".format(
+                                 template, self.path, kwargs))
+
     def generate_from_templates(self, templates, start_tag="[", end_tag="]", makedirs=False, **kwargs):
         """ Usefull to generate new files paths """
         if not isinstance(templates, (tuple, list)):
@@ -126,6 +146,14 @@ class FileDatabase:
                 os.makedirs(d, exist_ok=True)
         return templates
 
+    def generate_one_from_template(self, template, start_tag="[", end_tag="]", makedirs=False, **kwargs):
+        try:
+            return self.generate_from_templates(template, start_tag, end_tag, makedirs, **kwargs)[0]
+        except IndexError:
+            raise IndexError("{} was not found in {} with parameters: {}".format(
+                template, self.path, kwargs))
+
+    @_deprecation_alert_decorator(generate_one_from_template)
     def generate_from_template(self, template, start_tag="[", end_tag="]", makedirs=False, **kwargs):
         return self.generate_from_templates(template, start_tag, end_tag, makedirs, **kwargs)[0]
 
@@ -254,17 +282,16 @@ def infer_file_type(fpath, attributes):
         return "graph"
     elif attributes['extension'] == '.his':
         return "histogram"
-    return "unkown"
+    return "unknown"
 
 
 BV_TEMPLATES = {
+    "t1": "[center]/[subject]/t1mri/[acquisition]/[subject].nii*",
     "morpgologist_graph": "[center]/[subject]/t1mri/[acquisition]/[analysis]/folds/[version]/[hemi][subject].arg",
     "morphologist_labelled_graph": "[center]/[subject]/t1mri/[acquisition]/[analysis]/folds/[version]/[session]/[hemi][subject]_[session].arg",
     "morphologist_mesh": "[center]/[subject]/t1mri/[acquisition]/[analysis]/segmentation/mesh/[subject]_[hemi][type].[extension]",
     "morphologist_segmentation": "[center]/[subject]/t1mri/[acquisition]/[analysis]/segmentation/[hemi][type]_[subject].[extension]",
 }
-
-
 class BVDatabase(FileDatabase):
     """
 
@@ -371,7 +398,8 @@ class BVDatabase(FileDatabase):
                         if op.isdir(fold_path):
                             for version in listdir(fold_path):
                                 fold_subpath = op.join(fold_path, version)
-
+                                if not op.isdir(fold_subpath):
+                                    continue
                                 for f in listdir(fold_subpath):
                                     fpath = op.join(fold_subpath, f)
                                     if op.isfile(fpath):
@@ -410,3 +438,64 @@ class BVDatabase(FileDatabase):
     def scan(self):
         super().scan()
         self._scan_morphologist_analyses()
+
+
+class SegmentationType(Enum):
+    BRAIN = "brain"
+    CORTEX = "cortex"
+    CSF = "csf"
+    GREY = "grey"
+    GRAY_AND_WHITE = "gw"
+    GREY_WHITE_INTERFACE = "gw_interface"
+    ROOTS = "roots"
+    SKELETON = "skeleton"
+
+
+class MeshType(Enum):
+    HEAD = "head"
+    HEMI = "hemi"
+    WHITE = "white"
+
+
+class MorphologistAnalysis:
+    def __init__(self, analysis_path, database: BVDatabase = None) -> None:
+        self.path = analysis_path
+
+        if not database:
+            db_path = op.abspath(op.join(analysis_path, "..", "..", "..", "..", ".."))
+            database = BVDatabase(db_path)
+        sep = op.realpath(analysis_path).split(op.pathsep)[-1]
+
+        self.database = database
+        self.center = sep[-5]
+        self.subject_name = sep[-4]
+        self.acquisition = sep[-2]
+        self.analysis = sep[-1]   
+
+    def get_t1(self):
+        files = glob(op.join(self.path, "nobias_" + self.subject_name + ".nii*"))
+        return files[0] if len(files) else None
+
+    def get_graph_versions(self):
+        path = op.join(self.path, "folds")
+        return listdir(path) if op.exists(path) else None
+
+    def get_graph(self, hemi: Hemisphere, version: str):
+        f = op.join(self.path, 'folds', version, hemi + self.subject_name + '.arg')
+        return f if op.exists(f) else None
+        
+    def get_labelling_sessions(self, hemi: Hemisphere, version: str):
+        path = op.join(self.path, "folds", version)
+        return filter(lambda d : op.isdir(op.join(path, d)) and ((len(d)>=5 and d[-5:] != ".data") or len(d)<5), listdir(path)) if op.exists(path) else None
+
+    def get_labelled_graph(self, hemi: Hemisphere, version: str, session: str):
+        f = op.join(self.path, 'folds', version, session, hemi + self.subject_name + '_' + session + '.arg')
+        return f if op.exists(f) else None
+
+    def get_segmentation(self, type: SegmentationType):
+        f = glob(op.join(self.path, 'segmentation', type + "_" + self.subject_name + ".nii*"))
+        return f[0] if len(f) else None
+
+    def get_mesh(self, hemi: Hemisphere, type: MeshType, ext: str = ".mesh"):
+        f = glob(op.join(self.path, 'segmentation', 'mesh', self.subject_name + "_" + hemi + type + ext))
+        return f[0] if len(f) else None

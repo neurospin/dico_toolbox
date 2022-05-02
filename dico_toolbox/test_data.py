@@ -1,4 +1,3 @@
-from genericpath import exists
 import os.path as op
 import os
 import subprocess
@@ -10,7 +9,8 @@ import shutil
 
 # Links to the data for each release
 URLS = {
-    "0.1.0": "https://cloud.bablab.fr/index.php/s/FiHQsaPajZJSdRq/download"
+    "0.1.0": "https://cloud.bablab.fr/index.php/s/FiHQsaPajZJSdRq/download",
+    "0.1.1": "https://cloud.bablab.fr/index.php/s/ez5Bs8WTQsjwxQx/download"
 }
 
 
