@@ -1,3 +1,4 @@
+# [treesource] geometrical transformation
 import numpy as _np
 from soma import aims as _aims
 from soma import aimsalgo as _aimsalgo
@@ -19,12 +20,12 @@ def transform_bucket_resample(bucket_map: _aims.rc_ptr_BucketMap_VOID,
 
 
 def transform_datapoints(
-            data_points: _np.ndarray,
-            dxyz: _np.ndarray=None,
-            affine_matrix: _np.ndarray=None,
-            rotation_matrix: _np.ndarray=None,
-            translation_vector: _np.ndarray=None,
-            flip: bool = False) -> _np.ndarray:
+        data_points: _np.ndarray,
+        dxyz: _np.ndarray = None,
+        affine_matrix: _np.ndarray = None,
+        rotation_matrix: _np.ndarray = None,
+        translation_vector: _np.ndarray = None,
+        flip: bool = False) -> _np.ndarray:
     """Transform the data_points.
     Return a new transformed array without modifing the input data.
 
@@ -43,15 +44,15 @@ def transform_datapoints(
     """
 
     if affine_matrix is not None:
-        assert(affine_matrix.shape == (4,4)), "wrong matrix shape"
-        rotation_matrix = affine_matrix[0:3,0:3]
-        translation_vector = affine_matrix[0:3,3]
+        assert(affine_matrix.shape == (4, 4)), "wrong matrix shape"
+        rotation_matrix = affine_matrix[0:3, 0:3]
+        translation_vector = affine_matrix[0:3, 3]
 
     tr_data_points = data_points.copy().astype(float)
 
     # Rescale
-    if dxyz is not None and not _np.array_equal(dxyz,(1,1,1)):
-        dxyz = _np.array(dxyz).reshape(1,3) #ensure shape
+    if dxyz is not None and not _np.array_equal(dxyz, (1, 1, 1)):
+        dxyz = _np.array(dxyz).reshape(1, 3)  # ensure shape
         tr_data_points *= dxyz
 
     # Rotation
@@ -60,11 +61,12 @@ def transform_datapoints(
 
     # Translation
     if (translation_vector is not None) and not _np.array_equal(translation_vector, _np.zeros(3)):
-        translation_vector = _np.array(translation_vector).reshape(1,3) #ensure shape
-        tr_data_points += translation_vector 
+        translation_vector = _np.array(
+            translation_vector).reshape(1, 3)  # ensure shape
+        tr_data_points += translation_vector
 
     if flip:
-        tr_data_points[:,0] *= -1
+        tr_data_points[:, 0] *= -1
 
     return tr_data_points
 

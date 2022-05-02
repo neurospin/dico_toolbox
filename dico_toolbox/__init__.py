@@ -12,6 +12,7 @@ from . import bucket
 from . import test_data
 from . import mesh
 from . import anatomist
+from .recipes import *
 from .data_provider import *
 
 import logging

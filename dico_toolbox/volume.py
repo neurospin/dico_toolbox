@@ -1,4 +1,6 @@
+# [treesource] pyAims Volume manipulation
 from soma import aims as _aims
+
 
 def new_aims_volume_like(vol):
     """Create a new empty aims.Volume with the same shape as vol

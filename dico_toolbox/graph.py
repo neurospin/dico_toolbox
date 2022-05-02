@@ -1,3 +1,4 @@
+# [treesource] pyAims Graph manipulation
 from logging import warning
 import os.path as _op
 from typing import Iterable

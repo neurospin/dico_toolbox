@@ -1,3 +1,4 @@
+# [treesource] conversion of pyAims and numpy objects
 # from scipy.ndimage.measurements import minimum
 from . import bucket as _bucket
 from . import mesh as _mesh
@@ -78,7 +79,7 @@ def bucket_aims_to_ndarray(aims_bucket, voxel_size=(1, 1, 1)):
     return v
 
 
-def bucket_numpy_to_bucketMap_aims(ndarray, voxel_size=(1,1,1)):
+def bucket_numpy_to_bucketMap_aims(ndarray, voxel_size=(1, 1, 1)):
     """Transform a (N,3) ndarray into an aims BucketMap_VOID.
     The coordinates in the input array are casted to int.
     """
@@ -105,7 +106,6 @@ def bucket_numpy_to_bucketMap_aims(ndarray, voxel_size=(1,1,1)):
 @_deprecation_alert_decorator(bucket_numpy_to_bucketMap_aims)
 def bucket_numpy_to_bucket_aims(ndarray):
     pass
-
 
 
 def volume_to_ndarray(volume):
@@ -237,11 +237,12 @@ def volume_to_bucket_numpy(volume):
     return np.argwhere(volume_to_ndarray(volume))
 
 
-def volume_to_bucketMap_aims(volume, voxel_size=(1,1,1)):
+def volume_to_bucketMap_aims(volume, voxel_size=(1, 1, 1)):
     """Convert a volume (aims or numpy) into an AIMS bucket"""
     points_cloud = np.argwhere(volume_to_ndarray(volume))
-    #add 4th dimension to the vozel size with a default size of 1
+    # add 4th dimension to the vozel size with a default size of 1
     return bucket_numpy_to_bucketMap_aims(points_cloud, voxel_size=voxel_size)
+
 
 @_deprecation_alert_decorator(volume_to_bucketMap_aims)
 def volume_to_bucket_aims(volume):
@@ -380,7 +381,7 @@ def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
         raise ValueError("Input is a BucketMap, not a bucket.")
 
     if any([x-int(x) != 0 for x in bucket[:].ravel()]):
-        log.warn(
+        log.debug(
             "This bucket's coordinates are not integers. Did you apply any transformation to it?")
 
     volume, offset = bucket_numpy_to_volume_numpy(bucket)
@@ -389,42 +390,6 @@ def bucket_to_mesh(bucket, gblur_sigma=0, threshold=1,
     mesh = volume_to_mesh(volume, gblur_sigma=gblur_sigma, threshold=threshold, smoothRate=smoothRate,
                           deciMaxError=deciMaxError, deciMaxClearance=deciMaxClearance, smoothIt=smoothIt,
                           translation=translation, deciReductionRate=deciReductionRate)
-
-    return mesh
-
-
-def buket_to_aligned_mesh(*args, **kwargs):
-    raise SyntaxError(
-        "This function is deprecated due to misspelling of 'bucket', please use bucket_to_aligned_mesh")
-
-
-def bucket_to_aligned_mesh(raw_bucket, talairach_dxyz, talairach_rot, talairach_tr, align_rot, align_tr, flip=False, **kwargs):
-    """Generate the mesh of the given bucket.
-
-    The mesh is transformed according to the given rotations and translations.
-
-    The Talairach parameters are the scaling vector, the rotation matrix and the translation vector of the Talairach transform.
-    The align paramenters are the rotation matrix and translation vector of the alignment with the central subjet.
-
-    The kwargs are directly passed to cld.aims_tools.bucket_to_mesh().
-    """
-
-    # Generate mesh
-    mesh = bucket_to_mesh(raw_bucket, **kwargs)
-
-    dxyz = talairach_dxyz.copy()
-
-    # Rescale mesh
-    _mesh.rescale_mesh(mesh, dxyz)
-
-    # apply Talairach transform
-    _mesh.transform_mesh(mesh, talairach_rot, talairach_tr)
-
-    if flip:
-        _mesh.flip_mesh(mesh)
-
-    # apply alignment transform
-    _mesh.transform_mesh(mesh, align_rot, align_tr)
 
     return mesh
 

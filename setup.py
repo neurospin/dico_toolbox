@@ -30,7 +30,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url=release_info['URL'],
-    packages=['dico_toolbox'],
+    packages=setuptools.find_packages(),
     install_requires=release_info["REQUIRES"],
     classifiers=release_info["CLASSIFIERS"],
     extras_require=release_info['EXTRA_REQUIRES'],
