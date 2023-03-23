@@ -78,7 +78,7 @@ class Anatomist():
 
     def new_window_block(self, name="DefaultBlock", columns=2, windows=("Axial", "Sagittal", "Coronal", "3D"), size=None, pos=None):
         """Create a new window block"""
-        block = self._instance.createWindowsBlock(2)  # 2 columns
+        block = self._instance.createWindowsBlock(columns)  # 2 columns by default
         window_names = [wt+str(cnt) for cnt, wt in enumerate(windows)]
         wd = {wn: self.new_window(
             f"{name}_{wn}", window_type=wt, block=block, pos=pos, size=size) for wn, wt in zip(window_names, windows)}
@@ -154,7 +154,7 @@ class Anatomist():
         m.setChanged()
         m.notifyObservers()
 
-    def _add_objects(self, *objects, color=None, window_names=["Default"], auto_color=False):
+    def add_objects_to_anatomist(self, *objects, color=None,keep_objects=False, auto_color=False):
         """Add objects to one or more windows
 
         Args:
@@ -191,29 +191,116 @@ class Anatomist():
 
             # remove existing objects from anatomist
             existing_obj = self.anatomist_objects.get(name, None)
-            if existing_obj is not None:
-                self._delete_object(existing_obj)
 
-            m = self._instance.toAObject(obj)
-            m.setName(str(name))
+            if not keep_objects:
+                if existing_obj is not None:
+                    self._delete_object(existing_obj)
+
+                m = self._instance.toAObject(obj)
+                m.setName(str(name))
+
+            else:
+                if existing_obj is None:
+                    m = self._instance.toAObject(obj)
+                    m.setName(str(name))
+                else:
+                    m = self.anatomist_objects[name]
+
             m.setChanged()
             m.notifyObservers()
-            m.addInWindows([self.windows[window_name]
-                           for window_name in window_names])
-
-            self.objects[name] = obj
-            self.anatomist_objects[name] = m
 
             if auto_color:
                 self.set_next_default_color(name)
             elif color is not None:
                 self.set_objects_color(name, color=color)
 
+            if not keep_objects or existing_obj is None:
+                self.objects[name] = obj
+                self.anatomist_objects[name] = m  
+
+    def _add_objects(self, *objects, color=None, window_names=["Default"], keep_objects=False, auto_color=False):
+        """Add objects to one or more windows
+
+        Args:
+            color (str or iterable, optional): specify the object color. Defaults to None.
+            window_names (list of str, optional): name of the windows where the object will be displayed. Defaults to ["Default"].
+            auto_color (bool, optional): if True, set an automatic color for the object. Defaults to False.
+
+        Raises:
+            ValueError: _description_
+        """
+        if len(objects) == 1 and type(objects[0]) == dict:
+            # argument is a dictionnary
+            objects = objects[0]
+        elif type(objects) in [list, tuple]:
+            # list to dict
+            objects = {n: obj for n, obj in enumerate(objects)}
+
+        for name, obj in objects.items():
+            if isinstance(obj, numpy.ndarray):
+                # Object is a NUMPY arrays
+                if len(obj.shape) == 2 and obj.shape[1] == 3:
+                    # object is a point cloud
+                    obj = bucket_numpy_to_bucketMap_aims(obj)
+                elif len(obj.shape) == 3:
+                    # object is a volume
+                    obj = ndarray_to_volume_aims(obj)
+                else:
+                    raise ValueError(
+                        f"object {name} is an unconvertible numpy array.")
+
+            if isinstance(obj, PyMesh):
+                # obj is a PyMesh
+                obj = obj.to_aims_mesh()
+
+            # remove existing objects from anatomist
+            existing_obj = self.anatomist_objects.get(name, None)
+
+            if not keep_objects:
+                if existing_obj is not None:
+                    self._delete_object(existing_obj)
+
+                m = self._instance.toAObject(obj)
+                m.setName(str(name))
+
+            else:
+                if existing_obj is None:
+                    m = self._instance.toAObject(obj)
+                    m.setName(str(name))
+                else:
+                    m = self.anatomist_objects[name]
+
+            m.setChanged()
+            m.notifyObservers()
+            m.addInWindows([self.windows[window_name]
+                        for window_name in window_names])
+            if auto_color:
+                self.set_next_default_color(name)
+            elif color is not None:
+                self.set_objects_color(name, color=color)
+
+            if not keep_objects or existing_obj is None:
+                self.objects[name] = obj
+                self.anatomist_objects[name] = m      
+
     def clear_window(self, window_name="Default"):
         a = self.get_anatomist_instance()
         w = self.windows.get(window_name, None)
         if w is not None:
-            a.removeObjects(a.getObjects(), w)
+            # a.removeObjects(a.getObjects(), w)
+            w.removeObjects(w.objects)
+
+    def clear_windows(self, window_name_list=["Default"]):
+        a = self.get_anatomist_instance()
+        window_object_list = []
+        for window_name in window_name_list:
+            w = self.windows.get(window_name, None)
+            if w is not None:
+               window_object_list.append(w) 
+        if window_object_list:
+            # a.removeObjects(a.getObjects(), window_object_list)
+            for window in window_object_list:
+                window.removeObjects(window.objects)
 
     def clear_block(self, block_name="DefaultBlock"):
         a = self.get_anatomist_instance()
@@ -221,7 +308,7 @@ class Anatomist():
             if w is not None:
                 a.removeObjects(a.getObjects(), w)
 
-    def add_objects_to_window(self, *objects, window_name="Default", color=None, auto_color=False):
+    def add_objects_to_window(self, *objects, window_name="Default", keep_objects=False, color=None, auto_color=False):
         """Add one or more (comma separated) AIMS objects to a window.
 
         If a single dictionnary is given argument, the objects are labeled according to the dictionnary keys
@@ -230,7 +317,7 @@ class Anatomist():
             window_name (str, optional): the name of the window. Defaults to "Default".
         """
         self._add_objects(
-            *objects, window_names=[window_name], color=color, auto_color=auto_color)
+            *objects, window_names=[window_name], color=color, keep_objects=keep_objects, auto_color=auto_color)
 
     def _set_object_color(self, anatomist_object, r=None, g=None, b=None, a=None):
         """update the color of an object by changing one or more of R,G,B,A."""
