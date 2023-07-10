@@ -317,7 +317,7 @@ def volume_to_mesh(vol, gblur_sigma=1, threshold="80%",
 
     vol_16 = _aims.Volume_S16((MAX_VOXEL_VALUE*gblur).astype(np.int16))
     thresholder = _aims.AimsThreshold(
-        _aims.AIMS_GREATER_OR_EQUAL_TO, threshold, dtype=vol_16)
+        _aims.AIMS_GREATER_OR_EQUAL_TO, np.int16(threshold), dtype=vol_16)
     thresh_vol = thresholder.bin(vol_16)
 
     # NOTE: I could not make the mesher work when tresholding with python
