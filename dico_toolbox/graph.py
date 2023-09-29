@@ -6,7 +6,6 @@ from . import convert as _convert
 import numpy as _np
 from soma import aims as _aims
 import sigraph
-# from joblib.parallel import Parallel, delayed, cpu_count
 from ._dev import _deprecation_alert_decorator
 import pandas as pd
 import numpy as np
@@ -69,6 +68,7 @@ VERTEX_KEYNAMES = [
     'thickness_mean',         # 5.13603
     'thickness_std',          # 1.24796
     'white_surface_area',     # 91.1045
+    'label'
 ]
 
 

@@ -289,6 +289,8 @@ def infer_file_type(fpath, attributes):
 BV_TEMPLATES = {
     "t1": "[center]/[subject]/t1mri/[acquisition]/[subject].nii*",
     "morpgologist_graph": "[center]/[subject]/t1mri/[acquisition]/[analysis]/folds/[version]/[hemi][subject].arg",
+    "morphologist_nobias": "[center]/[subject]/t1mri/[acquisition]/[analysis]/nobias_[subject].nii*",
+    "morphologist_labeled_graph": "[center]/[subject]/t1mri/[acquisition]/[analysis]/folds/[version]/[session]/[hemi][subject]_[session].arg",
     "morphologist_labelled_graph": "[center]/[subject]/t1mri/[acquisition]/[analysis]/folds/[version]/[session]/[hemi][subject]_[session].arg",
     "morphologist_mesh": "[center]/[subject]/t1mri/[acquisition]/[analysis]/segmentation/mesh/[subject]_[hemi][type].[extension]",
     "morphologist_segmentation": "[center]/[subject]/t1mri/[acquisition]/[analysis]/segmentation/[hemi][type]_[subject].[extension]",
